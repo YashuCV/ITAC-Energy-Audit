@@ -1,0 +1,581 @@
+/* ITAC Energy Audit Form – iPad-friendly, touch-optimized */
+
+:root {
+  --bg: #f0f4f8;
+  --surface: #fff;
+  --primary: #1a365d;
+  --primary-light: #2c5282;
+  --accent: #2b6cb0;
+  --text: #1a202c;
+  --text-muted: #4a5568;
+  --border: #e2e8f0;
+  --touch-min: 44px;
+  --radius: 8px;
+  --shadow: 0 1px 3px rgba(0,0,0,0.08);
+  --safe-top: env(safe-area-inset-top);
+  --safe-bottom: env(safe-area-inset-bottom);
+}
+
+* {
+  box-sizing: border-box;
+}
+
+html {
+  -webkit-text-size-adjust: 100%;
+  -webkit-tap-highlight-color: transparent;
+}
+
+.compat-banner {
+  background: #c53030;
+  color: #fff;
+  padding: 12px 16px;
+  font-size: 0.95rem;
+  text-align: center;
+  line-height: 1.4;
+}
+.compat-banner[hidden] {
+  display: none !important;
+}
+
+body {
+  margin: 0;
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+  font-size: 16px;
+  line-height: 1.5;
+  color: var(--text);
+  background: var(--bg);
+  padding-bottom: var(--safe-bottom);
+  min-height: 100vh;
+  min-height: -webkit-fill-available;
+  overflow-x: hidden;
+  -webkit-overflow-scrolling: touch;
+  overscroll-behavior-y: contain;
+}
+
+/* App bar – fixed on scroll for iPad */
+.app-bar {
+  position: sticky;
+  top: 0;
+  z-index: 100;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  padding: 12px 16px 12px max(16px, var(--safe-top));
+  background: var(--primary);
+  color: #fff;
+  box-shadow: var(--shadow);
+}
+
+.app-bar h1 {
+  margin: 0;
+  font-size: 1.25rem;
+  font-weight: 600;
+}
+
+.app-bar-actions {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+/* Tab bar – horizontal scroll on small screens, sticks below app bar */
+.tab-bar {
+  position: sticky;
+  top: 52px; /* below app bar */
+  z-index: 99;
+  display: flex;
+  gap: 0;
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
+  scrollbar-width: thin;
+  background: #edf2f7;
+  border-bottom: 2px solid var(--border);
+  padding: 0 8px;
+  margin: 0;
+  list-style: none;
+}
+
+.tab-bar::-webkit-scrollbar {
+  height: 6px;
+}
+
+.tab-bar::-webkit-scrollbar-thumb {
+  background: var(--border);
+  border-radius: 3px;
+}
+
+.tab-btn {
+  flex: 0 0 auto;
+  min-height: 48px;
+  padding: 14px 16px;
+  font-size: 0.95rem;
+  font-weight: 500;
+  color: var(--text-muted);
+  background: transparent;
+  border: none;
+  border-bottom: 3px solid transparent;
+  cursor: pointer;
+  white-space: nowrap;
+  -webkit-appearance: none;
+  appearance: none;
+  touch-action: manipulation;
+  -webkit-tap-highlight-color: transparent;
+  transition: color 0.15s ease, border-color 0.15s ease, background 0.15s ease;
+}
+
+.tab-btn:hover {
+  color: var(--primary);
+  background: rgba(26, 54, 93, 0.06);
+}
+
+.tab-btn.active {
+  color: var(--primary);
+  background: var(--surface);
+  border-bottom-color: var(--primary);
+  box-shadow: 0 -1px 0 0 var(--surface);
+}
+
+.tab-btn:focus {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+}
+
+/* Tab panels – only the active one is visible */
+.form-section.tab-panel {
+  display: none;
+}
+
+.form-section.tab-panel.active {
+  display: block;
+}
+
+.save-status {
+  font-size: 0.875rem;
+  opacity: 0.9;
+}
+
+.save-status.saving {
+  opacity: 1;
+  animation: pulse 0.8s ease-in-out infinite;
+}
+
+@keyframes pulse {
+  50% { opacity: 0.6; }
+}
+
+/* Buttons – minimum 44px for touch */
+.btn {
+  min-height: var(--touch-min);
+  min-width: var(--touch-min);
+  padding: 10px 16px;
+  font-size: 1rem;
+  font-weight: 500;
+  border: none;
+  border-radius: var(--radius);
+  cursor: pointer;
+  -webkit-appearance: none;
+  appearance: none;
+  touch-action: manipulation;
+}
+
+.btn-reset {
+  background: rgba(255,255,255,0.2);
+  color: #fff;
+  border: 1px solid rgba(255,255,255,0.4);
+}
+
+.btn-reset:hover, .btn-reset:focus {
+  background: rgba(255,255,255,0.3);
+}
+
+.btn-download {
+  background: #edf2f7;
+  color: var(--primary);
+}
+
+.btn-download:hover, .btn-download:focus {
+  background: #e2e8f0;
+}
+
+.btn-download:active {
+  transform: scale(0.98);
+}
+
+.btn-add-row {
+  margin-top: 8px;
+  background: var(--accent);
+  color: #fff;
+  width: 100%;
+  max-width: 280px;
+}
+
+.btn-add-row:hover, .btn-add-row:focus {
+  background: var(--primary-light);
+}
+
+.btn-remove-row {
+  min-width: var(--touch-min);
+  min-height: var(--touch-min);
+  padding: 0;
+  font-size: 1.5rem;
+  line-height: 1;
+  background: #fed7d7;
+  color: #c53030;
+  border: none;
+  border-radius: var(--radius);
+  cursor: pointer;
+  touch-action: manipulation;
+}
+
+.btn-remove-row:hover {
+  background: #fc8181;
+  color: #fff;
+}
+
+.btn-large {
+  padding: 14px 24px;
+  font-size: 1.1rem;
+}
+
+/* Form container – smooth scroll on iPad */
+.form-container {
+  max-width: 1200px;
+  margin: 0 auto;
+  padding: 20px 16px 40px;
+  -webkit-overflow-scrolling: touch;
+}
+
+/* Tab notes area – extra points & unlimited notes pages per section */
+.tab-notes-area {
+  margin-top: 28px;
+  padding-top: 20px;
+  border-top: 2px solid var(--border);
+}
+
+.tab-notes-area h3 {
+  margin: 0 0 12px;
+  font-size: 1.1rem;
+  color: var(--primary);
+}
+
+.tab-notes-area > label {
+  display: block;
+  font-weight: 600;
+  margin-bottom: 6px;
+}
+
+.tab-notes-area > textarea {
+  min-height: 100px;
+  resize: vertical;
+  margin-bottom: 20px;
+}
+
+.notes-pages-container {
+  margin-top: 16px;
+}
+
+.notes-page {
+  margin-bottom: 24px;
+  padding: 16px;
+  background: #f8fafc;
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  box-shadow: 0 1px 2px rgba(0,0,0,0.04);
+}
+
+.notes-page label {
+  display: block;
+  font-weight: 600;
+  margin-bottom: 8px;
+  color: var(--text-muted);
+}
+
+.notes-page textarea,
+.tab-notes-area > textarea {
+  display: block;
+  width: 100%;
+  padding: 12px 14px;
+  font-size: 16px; /* prevents zoom on focus on iOS */
+  line-height: 1.5;
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  background: #fff;
+  -webkit-appearance: none;
+  appearance: none;
+  font-family: inherit;
+}
+
+.notes-page textarea {
+  min-height: 180px;
+  resize: vertical;
+}
+
+.tab-notes-area > textarea {
+  min-height: 100px;
+  resize: vertical;
+  margin-bottom: 20px;
+}
+
+.btn-add-notes-page {
+  margin-top: 8px;
+  background: #e2e8f0;
+  color: var(--primary);
+  width: 100%;
+  max-width: 320px;
+}
+
+.btn-add-notes-page:hover, .btn-add-notes-page:focus {
+  background: #cbd5e0;
+}
+
+.form-section {
+  background: var(--surface);
+  border-radius: var(--radius);
+  box-shadow: var(--shadow);
+  padding: 24px;
+  margin-bottom: 24px;
+}
+
+.form-section h2 {
+  margin: 0 0 20px;
+  font-size: 1.35rem;
+  color: var(--primary);
+  border-bottom: 2px solid var(--border);
+  padding-bottom: 10px;
+}
+
+.form-section h3 {
+  margin: 20px 0 12px;
+  font-size: 1.1rem;
+  color: var(--text);
+}
+
+/* Labels and inputs – large touch targets */
+label {
+  display: block;
+  margin-bottom: 12px;
+}
+
+label input,
+input[type="text"],
+input[type="email"],
+input[type="tel"],
+input[type="number"],
+input[type="date"],
+input[type="datetime-local"] {
+  display: block;
+  width: 100%;
+  min-height: var(--touch-min);
+  margin-top: 4px;
+  padding: 10px 12px;
+  font-size: 16px; /* prevents zoom on focus on iOS */
+  line-height: 1.4;
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  background: #fff;
+  -webkit-appearance: none;
+  appearance: none;
+}
+
+input:focus {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+}
+
+input::placeholder {
+  color: #a0aec0;
+}
+
+/* Form grid for side-by-side on larger screens */
+.form-grid {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 12px 20px;
+}
+
+@media (min-width: 600px) {
+  .form-grid {
+    grid-template-columns: repeat(2, 1fr);
+  }
+}
+
+@media (min-width: 900px) {
+  .form-grid {
+    grid-template-columns: repeat(3, 1fr);
+  }
+}
+
+/* Tables – scroll horizontally on small screens */
+.table-wrapper {
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
+  margin: 16px 0;
+}
+
+.data-table {
+  width: 100%;
+  min-width: 600px;
+  border-collapse: collapse;
+  font-size: 14px;
+}
+
+.data-table th,
+.data-table td {
+  padding: 10px 8px;
+  border: 1px solid var(--border);
+  text-align: left;
+  vertical-align: top;
+}
+
+.data-table th {
+  background: #edf2f7;
+  font-weight: 600;
+  color: var(--primary);
+}
+
+.data-table td input {
+  min-height: 40px;
+  width: 100%;
+  padding: 8px;
+  font-size: 14px;
+  border: 1px solid var(--border);
+  border-radius: 4px;
+}
+
+.data-table td:last-child {
+  width: 48px;
+}
+
+/* Checklist rows (Yes/No) */
+.checklist {
+  margin: 16px 0;
+}
+
+.check-row {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 12px;
+  min-height: var(--touch-min);
+  padding: 10px 0;
+  border-bottom: 1px solid var(--border);
+}
+
+.check-row span {
+  flex: 1 1 200px;
+  font-weight: 500;
+}
+
+.check-row label {
+  margin: 0;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  cursor: pointer;
+}
+
+.check-row input[type="radio"] {
+  width: 22px;
+  height: 22px;
+  min-height: 22px;
+  margin: 0;
+}
+
+.check-row select {
+  min-width: 80px;
+  min-height: 40px;
+  padding: 6px 8px;
+  font-size: 1rem;
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  background: #fff;
+  -webkit-appearance: none;
+  appearance: none;
+  cursor: pointer;
+}
+
+.note-inp {
+  flex: 1 1 120px;
+  min-width: 100px;
+  min-height: 40px;
+  padding: 6px 10px;
+  font-size: 14px;
+  border: 1px solid var(--border);
+  border-radius: 4px;
+}
+
+/* Section notes / recommendations */
+.section-note {
+  margin: 16px 0 0;
+  padding: 12px;
+  background: #ebf8ff;
+  border-left: 4px solid var(--accent);
+  font-size: 0.9rem;
+  color: var(--text-muted);
+}
+
+.recommendations {
+  margin-top: 20px;
+}
+
+/* Form actions at bottom */
+.form-actions {
+  margin-top: 32px;
+  padding: 24px;
+  background: var(--surface);
+  border-radius: var(--radius);
+  box-shadow: var(--shadow);
+  text-align: center;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
+  justify-content: center;
+}
+
+.form-actions .btn-reset {
+  background: #fff5f5;
+  color: #c53030;
+  border: 1px solid #feb2b2;
+}
+
+.form-actions .btn-reset:hover, .form-actions .btn-reset:focus {
+  background: #fed7d7;
+}
+
+/* Print styles for PDF export */
+@media print {
+  .app-bar,
+  .tab-bar,
+  .btn-add-row,
+  .btn-remove-row,
+  .btn-add-notes-page,
+  .btn-reset,
+  #resetFormBottom,
+  .form-actions,
+  .save-status {
+    display: none !important;
+  }
+
+  .form-section.tab-panel {
+    display: block !important;
+  }
+
+  body {
+    background: #fff;
+  }
+
+  .form-section {
+    box-shadow: none;
+    border: 1px solid #ddd;
+    break-inside: avoid;
+  }
+
+  .table-wrapper {
+    overflow: visible;
+  }
+
+  .data-table {
+    min-width: auto;
+  }
+}

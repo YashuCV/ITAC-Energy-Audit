@@ -1,0 +1,532 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, maximum-scale=1, user-scalable=no">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <meta name="apple-mobile-web-app-title" content="ITAC Energy Audit">
+  <meta name="theme-color" content="#1a365d">
+  <meta name="format-detection" content="telephone=no">
+  <title>ITAC Energy Audit Form</title>
+  <link rel="manifest" href="manifest.json">
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+  <div id="compatBanner" class="compat-banner" role="alert" hidden>
+    For <strong>tabs, save and PDF</strong> to work, open this page in <strong>Safari</strong> or an <strong>HTML Viewer</strong> app (App Store). Email preview does not support these features.
+  </div>
+  <div class="app-bar">
+    <h1>ITAC Energy Audit</h1>
+    <div class="app-bar-actions">
+      <span class="save-status" id="saveStatus" aria-live="polite">Saved</span>
+      <button type="button" class="btn btn-reset" id="resetForm" aria-label="Reset form for next audit">Reset</button>
+      <button type="button" class="btn btn-download" id="downloadPdf" aria-label="Download as PDF">
+        Download PDF
+      </button>
+    </div>
+  </div>
+
+  <nav class="tab-bar" role="tablist" aria-label="Audit sections">
+    <button type="button" class="tab-btn active" role="tab" data-tab="general" id="tab-general" aria-selected="true">General</button>
+    <button type="button" class="tab-btn" role="tab" data-tab="utility" id="tab-utility" aria-selected="false">Utility</button>
+    <button type="button" class="tab-btn" role="tab" data-tab="lighting" id="tab-lighting" aria-selected="false">Lighting</button>
+    <button type="button" class="tab-btn" role="tab" data-tab="hvac" id="tab-hvac" aria-selected="false">HVAC</button>
+    <button type="button" class="tab-btn" role="tab" data-tab="compressed_air" id="tab-compressed_air" aria-selected="false">Compressed Air</button>
+    <button type="button" class="tab-btn" role="tab" data-tab="boiler" id="tab-boiler" aria-selected="false">Boiler System</button>
+    <button type="button" class="tab-btn" role="tab" data-tab="envelope" id="tab-envelope" aria-selected="false">Building Envelope</button>
+    <button type="button" class="tab-btn" role="tab" data-tab="power" id="tab-power" aria-selected="false">Power System</button>
+    <button type="button" class="tab-btn" role="tab" data-tab="chillers" id="tab-chillers" aria-selected="false">Chillers</button>
+    <button type="button" class="tab-btn" role="tab" data-tab="generator" id="tab-generator" aria-selected="false">Generator</button>
+  </nav>
+
+  <main class="form-container">
+    <form id="auditForm" autocomplete="off">
+
+      <!-- Tab: General -->
+      <section class="form-section tab-panel active" data-section="general" id="panel-general" role="tabpanel" aria-labelledby="tab-general">
+        <h2>General Facility Information</h2>
+        <div class="form-grid">
+          <label>Site visit date <input type="date" name="site_visit_date"></label>
+          <label>Name of the facility <input type="text" name="facility_name" placeholder="Facility name"></label>
+          <label>Location of the facility <input type="text" name="facility_location" placeholder="Address / city"></label>
+          <label>Total facility area (built) – office area <input type="text" name="facility_area" placeholder="e.g. sq ft"></label>
+          <label>Contact person (1) – name and designation <input type="text" name="contact1_name"></label>
+          <label>Contact person (1) – phone <input type="tel" name="contact1_phone" inputmode="tel"></label>
+          <label>Contact person (1) – email <input type="email" name="contact1_email" inputmode="email"></label>
+          <label>Contact person (2) – name and designation <input type="text" name="contact2_name"></label>
+          <label>Contact person (2) – phone <input type="tel" name="contact2_phone" inputmode="tel"></label>
+          <label>Contact person (2) – email <input type="email" name="contact2_email" inputmode="email"></label>
+          <label>Number of employees <input type="text" name="num_employees" inputmode="numeric"></label>
+          <label>Production schedule <input type="text" name="production_schedule" placeholder="e.g. 24/7, Mon–Fri"></label>
+          <label>Regular office schedule <input type="text" name="office_schedule" placeholder="e.g. 8am–5pm"></label>
+          <label>Major products / services <input type="text" name="major_products"></label>
+          <label>Annual Sales / gross revenue <input type="text" name="annual_sales"></label>
+          <label>Main raw materials <input type="text" name="raw_materials"></label>
+          <label>Final wastes <input type="text" name="final_wastes"></label>
+          <label>Labor rates for site improvements <input type="text" name="labor_rates"></label>
+        </div>
+        <div class="tab-notes-area">
+          <h3>Extra points & notes</h3>
+          <label>Key points / extra notes for this section</label>
+          <textarea name="notes_extra_general" rows="4" placeholder="Type or scroll for more space…"></textarea>
+          <div class="notes-pages-container" data-section="general">
+            <input type="hidden" name="notes_page_count_general" value="1">
+            <div class="notes-page" data-page-index="0">
+              <label>Notes page 1</label>
+              <textarea name="notes_page_general_0" rows="14" placeholder="Use this area for handwritten notes or extra details…"></textarea>
+            </div>
+            <button type="button" class="btn btn-add-notes-page" data-section="general">+ Add another notes page</button>
+          </div>
+        </div>
+      </section>
+
+      <!-- Tab: Utility -->
+      <section class="form-section tab-panel" data-section="utility" id="panel-utility" role="tabpanel" aria-labelledby="tab-utility">
+        <h2>Utility Consumption</h2>
+        <div class="form-grid">
+          <label>Electricity supplier name <input type="text" name="electricity_supplier"></label>
+          <label>Electricity kWh charge <input type="text" name="electricity_kwh_charge" inputmode="decimal"></label>
+          <label>Electricity demand charge <input type="text" name="electricity_demand_charge" inputmode="decimal"></label>
+          <label>Power factor <input type="text" name="power_factor" inputmode="decimal"></label>
+          <label>Natural gas supplier name <input type="text" name="gas_supplier"></label>
+          <label>Natural gas cost <input type="text" name="gas_cost" inputmode="decimal"></label>
+          <label>Potable water supplier name <input type="text" name="water_supplier"></label>
+          <label>Potable water cost <input type="text" name="water_cost" inputmode="decimal"></label>
+          <label>Annual fuel oil consumption <input type="text" name="fuel_oil_consumption" inputmode="decimal"></label>
+          <label>Solar PV capacity (if available) <input type="text" name="solar_pv_capacity" inputmode="decimal"></label>
+          <label>Renewable energy capacity (if available) <input type="text" name="renewable_capacity" inputmode="decimal"></label>
+        </div>
+        <div class="recommendations">
+          <p class="section-note">Possible Recommendations: Install solar PV; Install wastewater meter.</p>
+        </div>
+        <div class="tab-notes-area">
+          <h3>Extra points & notes</h3>
+          <label>Key points / extra notes for this section</label>
+          <textarea name="notes_extra_utility" rows="4" placeholder="Type or scroll for more space…"></textarea>
+          <div class="notes-pages-container" data-section="utility">
+            <input type="hidden" name="notes_page_count_utility" value="1">
+            <div class="notes-page" data-page-index="0">
+              <label>Notes page 1</label>
+              <textarea name="notes_page_utility_0" rows="14" placeholder="Use this area for handwritten notes or extra details…"></textarea>
+            </div>
+            <button type="button" class="btn btn-add-notes-page" data-section="utility">+ Add another notes page</button>
+          </div>
+        </div>
+      </section>
+
+      <!-- Tab: Lighting -->
+      <section class="form-section tab-panel" data-section="lighting" id="panel-lighting" role="tabpanel" aria-labelledby="tab-lighting">
+        <h2>Lighting System</h2>
+        <p class="section-note">If a single room has multiple fixture types, list each type on a separate row.</p>
+        <div class="table-wrapper">
+          <table class="data-table" id="lightingTable">
+            <thead>
+              <tr>
+                <th>Location / Area</th>
+                <th>Similar fixture? (Y/N)</th>
+                <th>Number of fixtures</th>
+                <th>Lamps per fixture</th>
+                <th>Existing lamp type (non-LED)</th>
+                <th>Fixture demand (kW)</th>
+                <th>Daily/weekly operating hours</th>
+                <th>Occupancy sensor? (Y/N)</th>
+                <th>Mounting height (ft)</th>
+                <th></th>
+              </tr>
+            </thead>
+            <tbody id="lightingBody">
+              <tr class="data-row">
+                <td><input type="text" name="lighting_location_0"></td>
+                <td><input type="text" name="lighting_similar_0" placeholder="Y/N"></td>
+                <td><input type="text" name="lighting_fixtures_0" inputmode="numeric"></td>
+                <td><input type="text" name="lighting_lamps_0" inputmode="numeric"></td>
+                <td><input type="text" name="lighting_lamp_type_0"></td>
+                <td><input type="text" name="lighting_demand_0" inputmode="decimal"></td>
+                <td><input type="text" name="lighting_hours_0"></td>
+                <td><input type="text" name="lighting_sensor_0" placeholder="Y/N"></td>
+                <td><input type="text" name="lighting_height_0" inputmode="decimal"></td>
+                <td><button type="button" class="btn-remove-row" aria-label="Remove row">&times;</button></td>
+              </tr>
+            </tbody>
+          </table>
+          <button type="button" class="btn btn-add-row" id="addLightingRow">+ Add lighting row</button>
+        </div>
+        <div class="recommendations">
+          <p class="section-note">Possible Recommendations: Replace with LED; Install occupancy sensors; Install lighting control panels.</p>
+        </div>
+        <div class="tab-notes-area">
+          <h3>Extra points & notes</h3>
+          <label>Key points / extra notes for this section</label>
+          <textarea name="notes_extra_lighting" rows="4" placeholder="Type or scroll for more space…"></textarea>
+          <div class="notes-pages-container" data-section="lighting">
+            <input type="hidden" name="notes_page_count_lighting" value="1">
+            <div class="notes-page" data-page-index="0">
+              <label>Notes page 1</label>
+              <textarea name="notes_page_lighting_0" rows="14" placeholder="Use this area for handwritten notes or extra details…"></textarea>
+            </div>
+            <button type="button" class="btn btn-add-notes-page" data-section="lighting">+ Add another notes page</button>
+          </div>
+        </div>
+      </section>
+
+      <!-- Tab: HVAC -->
+      <section class="form-section tab-panel" data-section="hvac" id="panel-hvac" role="tabpanel" aria-labelledby="tab-hvac">
+        <h2>HVAC System</h2>
+        <label>HVAC system type <input type="text" name="hvac_system_type" placeholder="Split / Packaged / Mini split / Geothermal / Others"></label>
+        <div class="table-wrapper">
+          <table class="data-table" id="hvacTable">
+            <thead>
+              <tr>
+                <th>Parameter</th>
+                <th>HVAC-1</th>
+                <th>HVAC-2</th>
+                <th>HVAC-3</th>
+                <th>HVAC-4</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr><td>S/N of HVAC</td><td><input type="text" name="hvac_sn_1"></td><td><input type="text" name="hvac_sn_2"></td><td><input type="text" name="hvac_sn_3"></td><td><input type="text" name="hvac_sn_4"></td></tr>
+              <tr><td>Brand Name</td><td><input type="text" name="hvac_brand_1"></td><td><input type="text" name="hvac_brand_2"></td><td><input type="text" name="hvac_brand_3"></td><td><input type="text" name="hvac_brand_4"></td></tr>
+              <tr><td>Model Number</td><td><input type="text" name="hvac_model_1"></td><td><input type="text" name="hvac_model_2"></td><td><input type="text" name="hvac_model_3"></td><td><input type="text" name="hvac_model_4"></td></tr>
+              <tr><td>Capacity (Tons / MMBtu)</td><td><input type="text" name="hvac_cap_1"></td><td><input type="text" name="hvac_cap_2"></td><td><input type="text" name="hvac_cap_3"></td><td><input type="text" name="hvac_cap_4"></td></tr>
+              <tr><td>Operating hours</td><td><input type="text" name="hvac_hours_1"></td><td><input type="text" name="hvac_hours_2"></td><td><input type="text" name="hvac_hours_3"></td><td><input type="text" name="hvac_hours_4"></td></tr>
+              <tr><td>Estimated age</td><td><input type="text" name="hvac_age_1"></td><td><input type="text" name="hvac_age_2"></td><td><input type="text" name="hvac_age_3"></td><td><input type="text" name="hvac_age_4"></td></tr>
+              <tr><td>Installed location / height</td><td><input type="text" name="hvac_location_1"></td><td><input type="text" name="hvac_location_2"></td><td><input type="text" name="hvac_location_3"></td><td><input type="text" name="hvac_location_4"></td></tr>
+            </tbody>
+          </table>
+        </div>
+        <h3>General heating/cooling</h3>
+        <div class="form-grid">
+          <label>Programmable thermostat available? If so, how many? <input type="text" name="hvac_thermostat_count"></label>
+          <label>Current Setpoint Temperature (SPT) <input type="text" name="hvac_spt_current" inputmode="decimal"></label>
+          <label>SPT during summer <input type="text" name="hvac_spt_summer" inputmode="decimal"></label>
+          <label>SPT during winter <input type="text" name="hvac_spt_winter" inputmode="decimal"></label>
+          <label>Setback temp – non-occupied hours / night time in summer <input type="text" name="hvac_sbt_summer" inputmode="decimal"></label>
+          <label>Setback temp – duringwinter <input type="text" name="hvac_sbt_winter" inputmode="decimal"></label>
+          <label>Destratification fans – how many? <input type="text" name="hvac_destrat_fans" inputmode="numeric"></label>
+          <label>Previous thermostat calibration date <input type="date" name="hvac_calibration_date"></label>
+          <label>Maintenance program frequency <input type="text" name="hvac_maintenance_freq"></label>
+          <label>Last maintenance date <input type="date" name="hvac_last_maintenance"></label>
+          <label>Duration of each maintenance per unit <input type="text" name="hvac_maintenance_duration"></label>
+          <label>Common tasks during maintenance <input type="text" name="hvac_maintenance_tasks"></label>
+        </div>
+        <div class="recommendations">
+          <p class="section-note">Replace HVAC with high efficiency; Clean coils; Install programmable thermostat; BMS; Setbacks; Automation; Natural gas infrared heaters; Destratification fans.</p>
+        </div>
+        <div class="tab-notes-area">
+          <h3>Extra points & notes</h3>
+          <label>Key points / extra notes for this section</label>
+          <textarea name="notes_extra_hvac" rows="4" placeholder="Type or scroll for more space…"></textarea>
+          <div class="notes-pages-container" data-section="hvac">
+            <input type="hidden" name="notes_page_count_hvac" value="1">
+            <div class="notes-page" data-page-index="0">
+              <label>Notes page 1</label>
+              <textarea name="notes_page_hvac_0" rows="14" placeholder="Use this area for handwritten notes or extra details…"></textarea>
+            </div>
+            <button type="button" class="btn btn-add-notes-page" data-section="hvac">+ Add another notes page</button>
+          </div>
+        </div>
+      </section>
+
+      <!-- Tab: Compressed Air -->
+      <section class="form-section tab-panel" data-section="compressed_air" id="panel-compressed_air" role="tabpanel" aria-labelledby="tab-compressed_air">
+        <h2>Compressed Air System</h2>
+        <label>Number of existing compressors <input type="text" name="compressor_count" inputmode="numeric"></label>
+        <div class="table-wrapper">
+          <table class="data-table">
+            <thead><tr><th>Parameters</th><th>Com-1</th><th>Com-2</th><th>Com-3</th></tr></thead>
+            <tbody>
+              <tr><td>Type (rotary/reciprocating/screw)</td><td><input type="text" name="com_type_1"></td><td><input type="text" name="com_type_2"></td><td><input type="text" name="com_type_3"></td></tr>
+              <tr><td>Brand</td><td><input type="text" name="com_brand_1"></td><td><input type="text" name="com_brand_2"></td><td><input type="text" name="com_brand_3"></td></tr>
+              <tr><td>Model</td><td><input type="text" name="com_model_1"></td><td><input type="text" name="com_model_2"></td><td><input type="text" name="com_model_3"></td></tr>
+              <tr><td>Size (HP)</td><td><input type="text" name="com_size_1"></td><td><input type="text" name="com_size_2"></td><td><input type="text" name="com_size_3"></td></tr>
+              <tr><td>Daily/Annual operating hours</td><td><input type="text" name="com_hours_1"></td><td><input type="text" name="com_hours_2"></td><td><input type="text" name="com_hours_3"></td></tr>
+              <tr><td>Estimated age</td><td><input type="text" name="com_age_1"></td><td><input type="text" name="com_age_2"></td><td><input type="text" name="com_age_3"></td></tr>
+              <tr><td>VFD installed? Specs</td><td><input type="text" name="com_vfd_1"></td><td><input type="text" name="com_vfd_2"></td><td><input type="text" name="com_vfd_3"></td></tr>
+              <tr><td>Discharge pressure (psig)</td><td><input type="text" name="com_discharge_1"></td><td><input type="text" name="com_discharge_2"></td><td><input type="text" name="com_discharge_3"></td></tr>
+              <tr><td>Min pressure at all other points of use</td><td><input type="text" name="com_min_press_1"></td><td><input type="text" name="com_min_press_2"></td><td><input type="text" name="com_min_press_3"></td></tr>
+              <tr><td>Load/Unload pressure</td><td><input type="text" name="com_load_1"></td><td><input type="text" name="com_load_2"></td><td><input type="text" name="com_load_3"></td></tr>
+              <tr><td>Loading/Unloading time</td><td><input type="text" name="com_load_time_1"></td><td><input type="text" name="com_load_time_2"></td><td><input type="text" name="com_load_time_3"></td></tr>
+              <tr><td>Cooling System (air/water cooled)</td><td><input type="text" name="com_cooling_1"></td><td><input type="text" name="com_cooling_2"></td><td><input type="text" name="com_cooling_3"></td></tr>
+            </tbody>
+          </table>
+        </div>
+        <div class="form-grid">
+          <label>Plans to change old compressor? <input type="text" name="com_plans_change"></label>
+          <label>Location of Compressors well ventilated? <input type="text" name="com_ventilated"></label>
+          <label>Primary air receiver tank? Total capacity? <input type="text" name="com_receiver"></label>
+          <label>Common header storage? Capacity? <input type="text" name="com_header_storage"></label>
+          <label>Secondary storage? Capacity? <input type="text" name="com_secondary_storage"></label>
+          <label>Loop distribution system used? <input type="text" name="com_loop_dist"></label>
+          <label>Maintenance programinterval <input type="text" name="com_maintenance_interval"></label>
+          <label>Last Leak detection program performed? <input type="text" name="com_last_leak"></label>
+          <label>What are the common activities during compressor maintenance? <input type="text" name="com_maint_activities"></label>
+          <label>Audible / visible leaks observed? <input type="text" name="com_leaks_observed"></label>
+          <label>How many leaks are identified? <input type="text" name="com_leaks_count"></label>
+          <label>What are the dBs of audible leaks? <input type="text" name="com_leaks_db"></label>
+          <label>What are the approximate sizes of leaks? <input type="text" name="com_leaks_size"></label>
+        </div>
+        <div class="recommendations">
+          <p class="section-note">Reduce pressure; Install central storage; Booster pump; Leak maintenance program.</p>
+        </div>
+        <div class="tab-notes-area">
+          <h3>Extra points & notes</h3>
+          <label>Key points / extra notes for this section</label>
+          <textarea name="notes_extra_compressed_air" rows="4" placeholder="Type or scroll for more space…"></textarea>
+          <div class="notes-pages-container" data-section="compressed_air">
+            <input type="hidden" name="notes_page_count_compressed_air" value="1">
+            <div class="notes-page" data-page-index="0">
+              <label>Notes page 1</label>
+              <textarea name="notes_page_compressed_air_0" rows="14" placeholder="Use this area for handwritten notes or extra details…"></textarea>
+            </div>
+            <button type="button" class="btn btn-add-notes-page" data-section="compressed_air">+ Add another notes page</button>
+          </div>
+        </div>
+      </section>
+
+      <!-- Tab: Boiler System -->
+      <section class="form-section tab-panel" data-section="boiler" id="panel-boiler" role="tabpanel" aria-labelledby="tab-boiler">
+        <h2>Boiler System</h2>
+        <div class="table-wrapper">
+          <table class="data-table">
+            <thead><tr><th>Parameters</th><th>B-1</th><th>B-2</th><th>B-3</th><th>B-4</th></tr></thead>
+            <tbody>
+              <tr><td>Brand</td><td><input type="text" name="boiler_brand_1"></td><td><input type="text" name="boiler_brand_2"></td><td><input type="text" name="boiler_brand_3"></td><td><input type="text" name="boiler_brand_4"></td></tr>
+              <tr><td>Model</td><td><input type="text" name="boiler_model_1"></td><td><input type="text" name="boiler_model_2"></td><td><input type="text" name="boiler_model_3"></td><td><input type="text" name="boiler_model_4"></td></tr>
+              <tr><td>Capacity (nameplate)</td><td><input type="text" name="boiler_cap_1"></td><td><input type="text" name="boiler_cap_2"></td><td><input type="text" name="boiler_cap_3"></td><td><input type="text" name="boiler_cap_4"></td></tr>
+              <tr><td>Fuel type</td><td><input type="text" name="boiler_fuel_1"></td><td><input type="text" name="boiler_fuel_2"></td><td><input type="text" name="boiler_fuel_3"></td><td><input type="text" name="boiler_fuel_4"></td></tr>
+              <tr><td>Daily/Annual schedule</td><td><input type="text" name="boiler_schedule_1"></td><td><input type="text" name="boiler_schedule_2"></td><td><input type="text" name="boiler_schedule_3"></td><td><input type="text" name="boiler_schedule_4"></td></tr>
+              <tr><td>EstimatedLoad factor</td><td><input type="text" name="boiler_load_1"></td><td><input type="text" name="boiler_load_2"></td><td><input type="text" name="boiler_load_3"></td><td><input type="text" name="boiler_load_4"></td></tr>
+              <tr><td>Boiler feed-water temperature</td><td><input type="text" name="boiler_feed_1"></td><td><input type="text" name="boiler_feed_2"></td><td><input type="text" name="boiler_feed_3"></td><td><input type="text" name="boiler_feed_4"></td></tr>
+              <tr><td>Combustion air inlet temp</td><td><input type="text" name="boiler_air_1"></td><td><input type="text" name="boiler_air_2"></td><td><input type="text" name="boiler_air_3"></td><td><input type="text" name="boiler_air_4"></td></tr>
+              <tr><td>Operating pressure</td><td><input type="text" name="boiler_pressure_1"></td><td><input type="text" name="boiler_pressure_2"></td><td><input type="text" name="boiler_pressure_3"></td><td><input type="text" name="boiler_pressure_4"></td></tr>
+              <tr><td>Condensate return temp</td><td><input type="text" name="boiler_cond_1"></td><td><input type="text" name="boiler_cond_2"></td><td><input type="text" name="boiler_cond_3"></td><td><input type="text" name="boiler_cond_4"></td></tr>
+              <tr><td>Make-up water temperature</td><td><input type="text" name="boiler_makeup_1"></td><td><input type="text" name="boiler_makeup_2"></td><td><input type="text" name="boiler_makeup_3"></td><td><input type="text" name="boiler_makeup_4"></td></tr>
+              <tr><td>Insulation temperature of the valve and flanges (using thermal gun)</td><td><input type="text" name="boiler_ins_temp_1"></td><td><input type="text" name="boiler_ins_temp_2"></td><td><input type="text" name="boiler_ins_temp_3"></td><td><input type="text" name="boiler_ins_temp_4"></td></tr>
+              <tr><td>Flue gas temp (using flue gas analyzer)</td><td><input type="text" name="boiler_flue_1"></td><td><input type="text" name="boiler_flue_2"></td><td><input type="text" name="boiler_flue_3"></td><td><input type="text" name="boiler_flue_4"></td></tr>
+              <tr><td>O2 %</td><td><input type="text" name="boiler_o2_1"></td><td><input type="text" name="boiler_o2_2"></td><td><input type="text" name="boiler_o2_3"></td><td><input type="text" name="boiler_o2_4"></td></tr>
+            </tbody>
+          </table>
+        </div>
+        <div class="form-grid">
+          <label>Boiler maintenance time <input type="text" name="boiler_maint_time"></label>
+          <label>Boiler maintenance interval <input type="text" name="boiler_maint_interval"></label>
+          <label>Condensate recovery system? <input type="text" name="boiler_condensate"></label>
+          <label>Automatic blowdown system? <input type="text" name="boiler_blowdown"></label>
+          <label>Insulation of the valve and flanges checked? <input type="text" name="boiler_insulation"></label>
+          <label>Waste heat recovery system installed? <input type="text" name="boiler_heat_recovery"></label>
+        </div>
+        <div class="recommendations">
+          <p class="section-note">Condensate recycling; Boiler maintenance; Steam trap program; Economizers; Insulate pipes; Auto trim; Reduce blowdown.</p>
+        </div>
+        <div class="tab-notes-area">
+          <h3>Extra points & notes</h3>
+          <label>Key points / extra notes for this section</label>
+          <textarea name="notes_extra_boiler" rows="4" placeholder="Type or scroll for more space…"></textarea>
+          <div class="notes-pages-container" data-section="boiler">
+            <input type="hidden" name="notes_page_count_boiler" value="1">
+            <div class="notes-page" data-page-index="0">
+              <label>Notes page 1</label>
+              <textarea name="notes_page_boiler_0" rows="14" placeholder="Use this area for handwritten notes or extra details…"></textarea>
+            </div>
+            <button type="button" class="btn btn-add-notes-page" data-section="boiler">+ Add another notes page</button>
+          </div>
+        </div>
+      </section>
+
+      <!-- Tab: Building Envelope -->
+      <section class="form-section tab-panel" data-section="envelope" id="panel-envelope" role="tabpanel" aria-labelledby="tab-envelope">
+        <h2>Building Envelope System</h2>
+        <div class="checklist">
+          <div class="check-row"><span>Insulation between heated/cooled spaces and unconditioned or outside areas?</span><select name="env_insulation"><option value="">—</option><option value="Y">Yes</option><option value="N">No</option></select><input type="text" name="env_insulation_note" class="note-inp" placeholder="Note"></div>
+          <div class="check-row"><span>Wall insulation thickness known?</span><select name="env_wall_thick"><option value="">—</option><option value="Y">Yes</option><option value="N">No</option></select><input type="text" name="env_wall_thick_note" class="note-inp" placeholder="Note"></div>
+          <div class="check-row"><span>Exterior wall materials of the facility identified?</span><select name="env_wall_materials"><option value="">—</option><option value="Y">Yes</option><option value="N">No</option></select><input type="text" name="env_wall_materials_note" class="note-inp" placeholder="Note"></div>
+          <div class="check-row"><span>Roof insulation present?</span><select name="env_roof_ins"><option value="">—</option><option value="Y">Yes</option><option value="N">No</option></select><input type="text" name="env_roof_ins_note" class="note-inp" placeholder="Note"></div>
+          <div class="check-row"><span>Roof insulation thickness known?</span><select name="env_roof_thick_yn"><option value="">—</option><option value="Y">Yes</option><option value="N">No</option></select><input type="text" name="env_roof_thick_yn_note" class="note-inp" placeholder="Note"></div>
+          <div class="check-row"><span>Hot surfaces insulation checked using thermal scanner?</span><select name="env_thermal"><option value="">—</option><option value="Y">Yes</option><option value="N">No</option></select><input type="text" name="env_thermal_note" class="note-inp" placeholder="Note"></div>
+          <div class="check-row"><span>Uninsulated valves/flanges found?</span><select name="env_uninsulated"><option value="">—</option><option value="Y">Yes</option><option value="N">No</option></select><input type="text" name="env_uninsulated_note" class="note-inp" placeholder="Note"></div>
+          <div class="check-row"><span>Automatic door closing mechanisms worked?</span><select name="env_door"><option value="">—</option><option value="Y">Yes</option><option value="N">No</option></select><input type="text" name="env_door_note" class="note-inp" placeholder="Note"></div>
+          <div class="check-row"><span>Vestibule doors at major entrances?</span><select name="env_vestibule"><option value="">—</option><option value="Y">Yes</option><option value="N">No</option></select><input type="text" name="env_vestibule_note" class="note-inp" placeholder="Note"></div>
+          <div class="check-row"><span>Broken or cracked windows noticed?</span><select name="env_windows"><option value="">—</option><option value="Y">Yes</option><option value="N">No</option></select><input type="text" name="env_windows_note" class="note-inp" placeholder="Note"></div>
+          <div class="check-row"><span>Any reflective or heat absorbing films installed?</span><select name="env_films"><option value="">—</option><option value="Y">Yes</option><option value="N">No</option></select><input type="text" name="env_films_note" class="note-inp" placeholder="Note"></div>
+          <div class="check-row"><span>Outdoor shading devices installed?</span><select name="env_shading"><option value="">—</option><option value="Y">Yes</option><option value="N">No</option></select><input type="text" name="env_shading_note" class="note-inp" placeholder="Note"></div>
+        </div>
+        <div class="form-grid">
+          <label>Exterior wall materials of the facility <input type="text" name="env_wall_detail"></label>
+          <label>Insulation materials in heated/cooled space <input type="text" name="env_insulation_detail"></label>
+          <label>Wall insulation thickness <input type="text" name="env_wall_thick_detail"></label>
+          <label>Inside wall surface temp (Usingthermal gun) <input type="text" name="env_wall_temp"></label>
+          <label>Roof insulation area <input type="text" name="env_roof_area"></label>
+          <label>Roof materials <input type="text" name="env_roof_materials"></label>
+          <label>Roof surface temp (Using thermal gun) <input type="text" name="env_roof_temp"></label>
+          <label>Roof insulation thickness <input type="text" name="env_roof_thick"></label>
+          <label>Age of insulation system <input type="text" name="env_insulation_age"></label>
+        </div>
+        <div class="recommendations">
+          <p class="section-note">Energy efficient windows; Wall/ceiling insulation; High speed doors; Vestibule/air curtain.</p>
+        </div>
+        <div class="tab-notes-area">
+          <h3>Extra points & notes</h3>
+          <label>Key points / extra notes for this section</label>
+          <textarea name="notes_extra_envelope" rows="4" placeholder="Type or scroll for more space…"></textarea>
+          <div class="notes-pages-container" data-section="envelope">
+            <input type="hidden" name="notes_page_count_envelope" value="1">
+            <div class="notes-page" data-page-index="0">
+              <label>Notes page 1</label>
+              <textarea name="notes_page_envelope_0" rows="14" placeholder="Use this area for handwritten notes or extra details…"></textarea>
+            </div>
+            <button type="button" class="btn btn-add-notes-page" data-section="envelope">+ Add another notes page</button>
+          </div>
+        </div>
+      </section>
+
+      <!-- Tab: Power System -->
+      <section class="form-section tab-panel" data-section="power" id="panel-power" role="tabpanel" aria-labelledby="tab-power">
+        <h2>Power System – Energy Assessment Checklist</h2>
+        <div class="checklist">
+          <div class="check-row"><span>Transformer ambient temperature high?</span><select name="pwr_transformer"><option value="">—</option><option value="Y">Yes</option><option value="N">No</option></select><input type="text" name="pwr_transformer_note" class="note-inp" placeholder="Note"></div>
+          <div class="check-row"><span>Transformers remain energized when serving no load for extended periods?</span><select name="pwr_trans_no_load"><option value="">—</option><option value="Y">Yes</option><option value="N">No</option></select><input type="text" name="pwr_trans_no_load_note" class="note-inp" placeholder="Note"></div>
+          <div class="check-row"><span>Vending machines remain energized during unoccupied periods?</span><select name="pwr_vending"><option value="">—</option><option value="Y">Yes</option><option value="N">No</option></select><input type="text" name="pwr_vending_note" class="note-inp" placeholder="Note"></div>
+          <div class="check-row"><span>Any Vend Miser installed?</span><select name="pwr_vend_miser"><option value="">—</option><option value="Y">Yes</option><option value="N">No</option></select><input type="text" name="pwr_vend_miser_note" class="note-inp" placeholder="Note"></div>
+          <div class="check-row"><span>Motor inventory completed?</span><select name="pwr_motor_inv"><option value="">—</option><option value="Y">Yes</option><option value="N">No</option></select><input type="text" name="pwr_motor_inv_note" class="note-inp" placeholder="Note"></div>
+          <div class="check-row"><span>Motor sizes recorded?</span><select name="pwr_motor_sizes"><option value="">—</option><option value="Y">Yes</option><option value="N">No</option></select><input type="text" name="pwr_motor_sizes_note" class="note-inp" placeholder="Note"></div>
+          <div class="check-row"><span>Motor efficiency class known?</span><select name="pwr_motor_eff"><option value="">—</option><option value="Y">Yes</option><option value="N">No</option></select><input type="text" name="pwr_motor_eff_note" class="note-inp" placeholder="Note"></div>
+          <div class="check-row"><span>VFDs installed on motors?</span><select name="pwr_vfd"><option value="">—</option><option value="Y">Yes</option><option value="N">No</option></select><input type="text" name="pwr_vfd_note" class="note-inp" placeholder="Note"></div>
+          <div class="check-row"><span>Pumps capacity recorded?</span><select name="pwr_pumps"><option value="">—</option><option value="Y">Yes</option><option value="N">No</option></select><input type="text" name="pwr_pumps_note" class="note-inp" placeholder="Note"></div>
+          <div class="check-row"><span>Belt-driven fan available?</span><select name="pwr_belt_fan"><option value="">—</option><option value="Y">Yes</option><option value="N">No</option></select><input type="text" name="pwr_belt_fan_note" class="note-inp" placeholder="Note"></div>
+          <div class="check-row"><span>Direct-driven fan available?</span><select name="pwr_direct_fan"><option value="">—</option><option value="Y">Yes</option><option value="N">No</option></select><input type="text" name="pwr_direct_fan_note" class="note-inp" placeholder="Note"></div>
+          <div class="check-row"><span>High electricity demand charges incurred?</span><select name="pwr_demand"><option value="">—</option><option value="Y">Yes</option><option value="N">No</option></select><input type="text" name="pwr_demand_note" class="note-inp" placeholder="Note"></div>
+          <div class="check-row"><span>Low power factor observed in the bill?</span><select name="pwr_pf"><option value="">—</option><option value="Y">Yes</option><option value="N">No</option></select><input type="text" name="pwr_pf_note" class="note-inp" placeholder="Note"></div>
+          <div class="check-row"><span>Any records of maintenance for motors and motor driven equipment available?</span><select name="pwr_maint_records"><option value="">—</option><option value="Y">Yes</option><option value="N">No</option></select><input type="text" name="pwr_maint_records_note" class="note-inp" placeholder="Note"></div>
+          <div class="check-row"><span>Are forklifts battery powered?</span><select name="pwr_forklift"><option value="">—</option><option value="Y">Yes</option><option value="N">No</option></select><input type="text" name="pwr_forklift_note" class="note-inp" placeholder="Note"></div>
+        </div>
+        <h3>Miscellaneous</h3>
+        <div class="table-wrapper">
+          <table class="data-table" id="powerMiscTable">
+            <thead><tr><th>Category</th><th>Location</th><th>Brand/Model</th><th>Age (years)</th><th>Capacity/Size (HP)</th><th>Number of units</th><th></th></tr></thead>
+            <tbody id="powerMiscBody">
+              <tr class="data-row"><td><input type="text" name="pwr_cat_0"></td><td><input type="text" name="pwr_loc_0"></td><td><input type="text" name="pwr_brand_0"></td><td><input type="text" name="pwr_age_0" inputmode="numeric"></td><td><input type="text" name="pwr_cap_0"></td><td><input type="text" name="pwr_units_0" inputmode="numeric"></td><td><button type="button" class="btn-remove-row" aria-label="Remove row">&times;</button></td></tr>
+            </tbody>
+          </table>
+          <button type="button" class="btn btn-add-row" id="addPowerMiscRow">+ Add row</button>
+        </div>
+        <div class="recommendations">
+          <p class="section-note">Capacitor bank; Vendmizers; Motor maintenance; Battery forklifts; Off-peak charging; NEMA premium motors; Turn off conveyors when not in use.</p>
+        </div>
+        <div class="tab-notes-area">
+          <h3>Extra points & notes</h3>
+          <label>Key points / extra notes for this section</label>
+          <textarea name="notes_extra_power" rows="4" placeholder="Type or scroll for more space…"></textarea>
+          <div class="notes-pages-container" data-section="power">
+            <input type="hidden" name="notes_page_count_power" value="1">
+            <div class="notes-page" data-page-index="0">
+              <label>Notes page 1</label>
+              <textarea name="notes_page_power_0" rows="14" placeholder="Use this area for handwritten notes or extra details…"></textarea>
+            </div>
+            <button type="button" class="btn btn-add-notes-page" data-section="power">+ Add another notes page</button>
+          </div>
+        </div>
+      </section>
+
+      <!-- Tab: Chillers -->
+      <section class="form-section tab-panel" data-section="chillers" id="panel-chillers" role="tabpanel" aria-labelledby="tab-chillers">
+        <h2>Chillers / Cooling Tower</h2>
+        <div class="table-wrapper">
+          <table class="data-table">
+            <thead><tr><th>Number of units</th><th>Brand/Model</th><th>Estimated age</th><th>Capacity/Size</th><th>Temp IN (°F)</th><th>Temp OUT (°F)</th><th>Wet bulb temp (°F)</th></tr></thead>
+            <tbody>
+              <tr><td><input type="text" name="chiller_units"></td><td><input type="text" name="chiller_brand"></td><td><input type="text" name="chiller_age"></td><td><input type="text" name="chiller_cap"></td><td><input type="text" name="chiller_temp_in" inputmode="decimal"></td><td><input type="text" name="chiller_temp_out" inputmode="decimal"></td><td><input type="text" name="chiller_wet_bulb" inputmode="decimal"></td></tr>
+            </tbody>
+          </table>
+        </div>
+        <div class="form-grid">
+          <label>Chiller operation time <input type="text" name="chiller_op_time"></label>
+          <label>Chiller efficiency <input type="text" name="chiller_efficiency"></label>
+        </div>
+        <div class="recommendations">
+          <p class="section-note">Replace cooling tower with premium efficient unit.</p>
+        </div>
+        <div class="tab-notes-area">
+          <h3>Extra points & notes</h3>
+          <label>Key points / extra notes for this section</label>
+          <textarea name="notes_extra_chillers" rows="4" placeholder="Type or scroll for more space…"></textarea>
+          <div class="notes-pages-container" data-section="chillers">
+            <input type="hidden" name="notes_page_count_chillers" value="1">
+            <div class="notes-page" data-page-index="0">
+              <label>Notes page 1</label>
+              <textarea name="notes_page_chillers_0" rows="14" placeholder="Use this area for handwritten notes or extra details…"></textarea>
+            </div>
+            <button type="button" class="btn btn-add-notes-page" data-section="chillers">+ Add another notes page</button>
+          </div>
+        </div>
+      </section>
+
+      <!-- Tab: Generator -->
+      <section class="form-section tab-panel" data-section="generator" id="panel-generator" role="tabpanel" aria-labelledby="tab-generator">
+        <h2>Generator</h2>
+        <label>Backup generator? (Y/N) <input type="text" name="gen_has_backup" placeholder="Y/N"></label>
+        <div class="table-wrapper">
+          <table class="data-table">
+            <thead><tr><th>Parameters</th><th>Gen-1</th><th>Gen-2</th><th>Gen-3</th><th>Gen-4</th></tr></thead>
+            <tbody>
+              <tr><td>Brand</td><td><input type="text" name="gen_brand_1"></td><td><input type="text" name="gen_brand_2"></td><td><input type="text" name="gen_brand_3"></td><td><input type="text" name="gen_brand_4"></td></tr>
+              <tr><td>Model</td><td><input type="text" name="gen_model_1"></td><td><input type="text" name="gen_model_2"></td><td><input type="text" name="gen_model_3"></td><td><input type="text" name="gen_model_4"></td></tr>
+              <tr><td>Fuel (N.G./Diesel/Other)</td><td><input type="text" name="gen_fuel_1"></td><td><input type="text" name="gen_fuel_2"></td><td><input type="text" name="gen_fuel_3"></td><td><input type="text" name="gen_fuel_4"></td></tr>
+              <tr><td>Capacity (KW/HP)</td><td><input type="text" name="gen_cap_1"></td><td><input type="text" name="gen_cap_2"></td><td><input type="text" name="gen_cap_3"></td><td><input type="text" name="gen_cap_4"></td></tr>
+              <tr><td>Running load (KW/HP)</td><td><input type="text" name="gen_load_1"></td><td><input type="text" name="gen_load_2"></td><td><input type="text" name="gen_load_3"></td><td><input type="text" name="gen_load_4"></td></tr>
+              <tr><td>Jacket water inlet °F</td><td><input type="text" name="gen_jw_in_1"></td><td><input type="text" name="gen_jw_in_2"></td><td><input type="text" name="gen_jw_in_3"></td><td><input type="text" name="gen_jw_in_4"></td></tr>
+              <tr><td>Jacket water outlet °F</td><td><input type="text" name="gen_jw_out_1"></td><td><input type="text" name="gen_jw_out_2"></td><td><input type="text" name="gen_jw_out_3"></td><td><input type="text" name="gen_jw_out_4"></td></tr>
+              <tr><td>Jacket water flowrate, gpm</td><td><input type="text" name="gpm_o2_1"></td><td><input type="text" name="gpm_o2_2"></td><td><input type="text" name="gpm_o2_3"></td><td><input type="text" name="gpm_o2_4"></td></tr>
+              <tr><td>Auxiliary cooling water inlet temp, °F</td><td><input type="text" name="aux_co_1"></td><td><input type="text" name="aux_co_2"></td><td><input type="text" name="aux_co_3"></td><td><input type="text" name="aux_co_4"></td></tr>
+              <tr><td>Auxiliary cooling water outlet temp, °F</td><td><input type="text" name="aux_co1_1"></td><td><input type="text" name="aux_co1_2"></td><td><input type="text" name="aux_co1_3"></td><td><input type="text" name="aux_co1_4"></td></tr>
+              <tr><td>Auxiliary cooling water flowrate, gpm</td><td><input type="text" name="aux_co2_1"></td><td><input type="text" name="aux_co2_2"></td><td><input type="text" name="aux_co2_3"></td><td><input type="text" name="aux_co2_4"></td></tr>
+            </tbody>
+          </table>
+        </div>
+        <h3>Flue Gas Analysis</h3>
+        <div class="table-wrapper">
+          <table class="data-table">
+            <thead><tr><th>Parameters</th><th>Gen-1</th><th>Gen-2</th><th>Gen-3</th><th>Gen-4</th></tr></thead>
+            <tbody>
+              <tr><td>O2 (%)</td><td><input type="text" name="gen_o2_1"></td><td><input type="text" name="gen_o2_2"></td><td><input type="text" name="gen_o2_3"></td><td><input type="text" name="gen_o2_4"></td></tr>
+              <tr><td>CO (ppm)</td><td><input type="text" name="gen_co_1"></td><td><input type="text" name="gen_co_2"></td><td><input type="text" name="gen_co_3"></td><td><input type="text" name="gen_co_4"></td></tr>
+              <tr><td>CO2 (%)</td><td><input type="text" name="gen_co2_1"></td><td><input type="text" name="gen_co2_2"></td><td><input type="text" name="gen_co2_3"></td><td><input type="text" name="gen_co2_4"></td></tr>
+              <tr><td>T flue (°F)</td><td><input type="text" name="gen_tflue_1"></td><td><input type="text" name="gen_tflue_2"></td><td><input type="text" name="gen_tflue_3"></td><td><input type="text" name="gen_tflue_4"></td></tr>
+              <tr><td>T air (°F)</td><td><input type="text" name="gen_tair_1"></td><td><input type="text" name="gen_tair_2"></td><td><input type="text" name="gen_tair_3"></td><td><input type="text" name="gen_tair_4"></td></tr>
+              <tr><td>ΔT (°F)</td><td><input type="text" name="gen_dt_1"></td><td><input type="text" name="gen_dt_2"></td><td><input type="text" name="gen_dt_3"></td><td><input type="text" name="gen_dt_4"></td></tr>
+              <tr><td>RH (%)</td><td><input type="text" name="gen_rh_1"></td><td><input type="text" name="gen_rh_2"></td><td><input type="text" name="gen_rh_3"></td><td><input type="text" name="gen_rh_4"></td></tr>
+            </tbody>
+          </table>
+        </div>
+        <div class="recommendations">
+          <p class="section-note">Waste heat from stack; CHP/cogeneration.</p>
+        </div>
+        <div class="tab-notes-area">
+          <h3>Extra points & notes</h3>
+          <label>Key points / extra notes for this section</label>
+          <textarea name="notes_extra_generator" rows="4" placeholder="Type or scroll for more space…"></textarea>
+          <div class="notes-pages-container" data-section="generator">
+            <input type="hidden" name="notes_page_count_generator" value="1">
+            <div class="notes-page" data-page-index="0">
+              <label>Notes page 1</label>
+              <textarea name="notes_page_generator_0" rows="14" placeholder="Use this area for handwritten notes or extra details…"></textarea>
+            </div>
+            <button type="button" class="btn btn-add-notes-page" data-section="generator">+ Add another notes page</button>
+          </div>
+        </div>
+      </section>
+
+      <div class="form-actions">
+        <button type="button" class="btn btn-reset btn-large" id="resetFormBottom">Reset for next audit</button>
+        <button type="button" class="btn btn-download btn-large" id="downloadPdfBottom">
+          Download form as PDF
+        </button>
+      </div>
+    </form>
+  </main>
+
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+  <script src="app.js"></script>
+</body>
+</html>

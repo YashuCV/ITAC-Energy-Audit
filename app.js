@@ -1218,7 +1218,35 @@
   downloadPdfBtn.addEventListener('click', downloadPdf);
 
   if ('serviceWorker' in navigator) {
-    navigator.serviceWorker.register('sw.js').catch(() => {});
+    navigator.serviceWorker.register('sw.js?v=3').then((reg) => {
+      reg.addEventListener('updatefound', () => {
+        const newWorker = reg.installing;
+        newWorker.addEventListener('statechange', () => {
+          if (newWorker.state === 'installed' && navigator.serviceWorker.controller) {
+            if (confirm('New version available! Reload to update?')) {
+              window.location.reload();
+            }
+          }
+        });
+      });
+      setInterval(() => {
+        reg.update();
+      }, 60000);
+    }).catch(() => {});
+    navigator.serviceWorker.addEventListener('message', (e) => {
+      if (e.data && e.data.type === 'SW_UPDATED') {
+        if (confirm('App updated! Reload to see changes?')) {
+          window.location.reload();
+        }
+      }
+    });
+    navigator.serviceWorker.getRegistrations().then((registrations) => {
+      registrations.forEach((reg) => {
+        if (reg.active && reg.active.scriptURL.indexOf('sw.js') !== -1) {
+          reg.update();
+        }
+      });
+    });
   }
 
   function addNotesPage(sectionId) {

@@ -1,9 +1,10 @@
-const CACHE_NAME = 'itac-energy-audit-v2';
+const CACHE_NAME = 'itac-energy-audit-v3';
+const CACHE_VERSION = '3';
 const URLS = [
   './',
   './index.html',
-  './styles.css',
-  './app.js',
+  './styles.css?v=' + CACHE_VERSION,
+  './app.js?v=' + CACHE_VERSION,
   './manifest.json',
   './image1.png',
   './image2.png',
@@ -20,7 +21,13 @@ self.addEventListener('activate', (e) => {
   e.waitUntil(
     caches.keys().then((keys) => Promise.all(
       keys.filter((k) => k !== CACHE_NAME).map((k) => caches.delete(k)))
-    ).then(() => self.clients.claim())
+    ).then(() => {
+      return self.clients.matchAll().then((clients) => {
+        clients.forEach((client) => {
+          client.postMessage({ type: 'SW_UPDATED' });
+        });
+      });
+    }).then(() => self.clients.claim())
   );
 });
 
@@ -36,7 +43,16 @@ self.addEventListener('fetch', (e) => {
           caches.open(CACHE_NAME).then((cache) => cache.put(e.request, clone));
         }
         return r;
-      }).catch(() => caches.match(e.request));
+      }).catch(() => {
+        const url = e.request.url;
+        if (url.includes('styles.css') || url.includes('app.js')) {
+          return caches.match(url.split('?')[0]).then((cached) => {
+            if (cached) return cached;
+            return caches.match('./index.html');
+          });
+        }
+        return caches.match(e.request);
+      });
     })
   );
 });

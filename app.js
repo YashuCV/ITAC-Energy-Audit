@@ -49,16 +49,18 @@
     panel.querySelectorAll('.handwritten-canvas').forEach(function (canvas) {
       var box = canvas.closest('.notes-combo-box');
       if (!box) return;
-      var r = box.getBoundingClientRect();
-      if (r.width > 0 && r.height > 0 && canvas.width === 600 && canvas.height === 220) {
+      var textarea = box.querySelector('.notes-combo-textarea');
+      if (!textarea) return;
+      var r = textarea.getBoundingClientRect();
+      if (r.width > 0 && r.height > 0 && (canvas.width === 600 || canvas.width === 0)) {
         var ctx = canvas.getContext('2d');
         if (ctx) {
-          var hadContent = canvas.width > 0 && canvas.height > 0;
+          var hadContent = canvas.width > 0 && canvas.height > 0 && canvasHasContent(canvas);
           var imgData = hadContent ? ctx.getImageData(0, 0, Math.min(canvas.width, 600), Math.min(canvas.height, 220)) : null;
           canvas.width = Math.floor(r.width);
           canvas.height = Math.floor(r.height);
-          ctx.fillStyle = '#fff';
-          ctx.fillRect(0, 0, canvas.width, canvas.height);
+          canvas.style.width = r.width + 'px';
+          canvas.style.height = r.height + 'px';
           if (imgData && imgData.data && imgData.data.length > 0) {
             try {
               var tempCanvas = document.createElement('canvas');
@@ -114,6 +116,17 @@
     });
   }
 
+  function canvasToImageWithBackground(canvas) {
+    var tempCanvas = document.createElement('canvas');
+    tempCanvas.width = canvas.width;
+    tempCanvas.height = canvas.height;
+    var ctx = tempCanvas.getContext('2d');
+    ctx.fillStyle = '#fff';
+    ctx.fillRect(0, 0, tempCanvas.width, tempCanvas.height);
+    ctx.drawImage(canvas, 0, 0);
+    return tempCanvas.toDataURL('image/png', 1.0);
+  }
+
   function updateCanvasHiddenInputs() {
     form.querySelectorAll('.handwritten-canvas').forEach(function (canvas) {
       var field = canvas.getAttribute('data-field');
@@ -122,7 +135,7 @@
       if (hidden) {
         try {
           if (canvasHasContent(canvas)) {
-            var dataUrl = canvas.toDataURL('image/png', 1.0);
+            var dataUrl = canvasToImageWithBackground(canvas);
             if (dataUrl && dataUrl !== 'data:,') {
               hidden.value = dataUrl;
             }
@@ -440,8 +453,7 @@
     actions.querySelector('.btn-clear-canvas').addEventListener('click', function () {
       var ctx = canvas.getContext('2d');
       if (ctx) {
-        ctx.fillStyle = '#fff';
-        ctx.fillRect(0, 0, canvas.width, canvas.height);
+        ctx.clearRect(0, 0, canvas.width, canvas.height);
       }
       hidden.value = '';
       scheduleSave();
@@ -471,11 +483,10 @@
     }
     var w = canvas.width;
     var h = canvas.height;
-    ctx.fillStyle = '#fff';
-    ctx.fillRect(0, 0, w, h);
     ctx.strokeStyle = '#000';
     ctx.lineWidth = 2;
     ctx.lineCap = 'round';
+    ctx.globalCompositeOperation = 'source-over';
     var drawing = false;
     var lastX = 0;
     var lastY = 0;
@@ -572,8 +583,7 @@
     form.querySelectorAll('.handwritten-canvas').forEach(function (canvas) {
       var ctx = canvas.getContext('2d');
       if (ctx) {
-        ctx.fillStyle = '#fff';
-        ctx.fillRect(0, 0, canvas.width, canvas.height);
+        ctx.clearRect(0, 0, canvas.width, canvas.height);
       }
       var field = canvas.getAttribute('data-field');
       if (field) {
@@ -884,23 +894,29 @@
     const val = (name) => (fields[name] || '').toString().trim();
     const extra = val('notes_extra_' + sectionId);
     const extraHand = val('notes_extra_' + sectionId + '_handwritten');
-    if (extraHand && extraHand.length > 100) {
-      addSubTitle('Handwritten note (ink)');
-      await addImageFromUrl(extraHand);
-    } else if (extra) {
+    if (extra || (extraHand && extraHand.length > 100)) {
       addSubTitle('Extra points / key notes');
-      addLine(extra);
+      if (extra) {
+        addLine(extra);
+      }
+      if (extraHand && extraHand.length > 100) {
+        addSubTitle('Handwritten note (ink)');
+        await addImageFromUrl(extraHand);
+      }
     }
     const count = parseInt(fields['notes_page_count_' + sectionId], 10) || 0;
     for (let i = 0; i < count; i++) {
       const pageText = val('notes_page_' + sectionId + '_' + i);
       const pageHand = val('notes_page_' + sectionId + '_' + i + '_handwritten');
-      if (pageHand && pageHand.length > 100) {
-        addSubTitle('Handwritten (ink) – page ' + (i + 1));
-        await addImageFromUrl(pageHand);
-      } else if (pageText) {
+      if (pageText || (pageHand && pageHand.length > 100)) {
         addSubTitle('Notes page ' + (i + 1));
-        addLine(pageText);
+        if (pageText) {
+          addLine(pageText);
+        }
+        if (pageHand && pageHand.length > 100) {
+          addSubTitle('Handwritten (ink) – page ' + (i + 1));
+          await addImageFromUrl(pageHand);
+        }
       }
     }
   }
@@ -1174,7 +1190,7 @@
         if (hidden) {
           try {
             if (canvasHasContent(canvas)) {
-              var dataUrl = canvas.toDataURL('image/png', 1.0);
+              var dataUrl = canvasToImageWithBackground(canvas);
               if (dataUrl && dataUrl !== 'data:,') {
                 hidden.value = dataUrl;
               }
@@ -1189,7 +1205,18 @@
       const doc = await buildPdfFull();
       const facility = (getFormData().fields.facility_name || 'Form').replace(/\s+/g, '-');
       const name = 'ITAC-Energy-Audit-' + facility + '-' + new Date().toISOString().slice(0, 10) + '.pdf';
-      doc.save(name);
+      const pdfBlob = doc.output('blob');
+      const pdfUrl = URL.createObjectURL(pdfBlob);
+      const link = document.createElement('a');
+      link.href = pdfUrl;
+      link.download = name;
+      link.target = '_blank';
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      setTimeout(function () {
+        URL.revokeObjectURL(pdfUrl);
+      }, 100);
       saveStatus.textContent = 'PDF downloaded';
       setTimeout(() => showStatus('Saved', false), 2000);
     } catch (e) {

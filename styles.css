@@ -399,6 +399,7 @@ body {
 
 .notes-combo-box.draw-mode .notes-combo-textarea {
   pointer-events: none;
+  user-select: none;
 }
 
 .notes-combo-actions {

@@ -43,6 +43,37 @@
     return TAB_IDS.includes(hash) ? hash : 'general';
   }
 
+  function resizeCanvasesInSection(sectionId) {
+    var panel = form.querySelector('.form-section[data-section="' + sectionId + '"]');
+    if (!panel || !panel.classList.contains('active')) return;
+    panel.querySelectorAll('.handwritten-canvas').forEach(function (canvas) {
+      var box = canvas.closest('.notes-combo-box');
+      if (!box) return;
+      var r = box.getBoundingClientRect();
+      if (r.width > 0 && r.height > 0 && canvas.width === 600 && canvas.height === 220) {
+        var ctx = canvas.getContext('2d');
+        if (ctx) {
+          var hadContent = canvas.width > 0 && canvas.height > 0;
+          var imgData = hadContent ? ctx.getImageData(0, 0, Math.min(canvas.width, 600), Math.min(canvas.height, 220)) : null;
+          canvas.width = Math.floor(r.width);
+          canvas.height = Math.floor(r.height);
+          ctx.fillStyle = '#fff';
+          ctx.fillRect(0, 0, canvas.width, canvas.height);
+          if (imgData && imgData.data && imgData.data.length > 0) {
+            try {
+              var tempCanvas = document.createElement('canvas');
+              tempCanvas.width = imgData.width;
+              tempCanvas.height = imgData.height;
+              tempCanvas.getContext('2d').putImageData(imgData, 0, 0);
+              ctx.drawImage(tempCanvas, 0, 0, canvas.width, canvas.height);
+            } catch (e) {
+            }
+          }
+        }
+      }
+    });
+  }
+
   function switchTab(tabId) {
     if (!TAB_IDS.includes(tabId)) tabId = 'general';
     document.querySelectorAll('.tab-btn').forEach((btn) => {
@@ -54,6 +85,7 @@
       panel.classList.toggle('active', panel.getAttribute('data-section') === tabId);
     });
     location.hash = tabId;
+    setTimeout(function () { resizeCanvasesInSection(tabId); }, 50);
   }
 
   function initTabs() {
@@ -803,7 +835,7 @@
     return false;
   }
 
-  async function await addSectionNotesToPdf(ctx, sectionId, sectionLabel, data) {
+  async function addSectionNotesToPdf(ctx, sectionId, sectionLabel, data) {
     const { addLine, addSubTitle, addImageFromUrl } = ctx;
     const fields = data.fields || {};
     const val = (name) => (fields[name] || '').toString().trim();

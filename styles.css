@@ -329,6 +329,110 @@ body {
   background: #cbd5e0;
 }
 
+/* Combined type + draw area – like iPad: keyboard = typed, pencil = ink in PDF */
+.handwritten-area {
+  margin-top: 12px;
+  margin-bottom: 16px;
+}
+
+.handwritten-area .handwritten-label {
+  display: block;
+  font-weight: 600;
+  margin-bottom: 6px;
+  color: var(--primary);
+  font-size: 0.95rem;
+}
+
+/* One box: textarea and canvas stacked; mode toggle */
+.notes-combo-box {
+  position: relative;
+  min-height: 220px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  background: #fff;
+  overflow: hidden;
+}
+
+.notes-page .notes-combo-box {
+  min-height: 260px;
+}
+
+.notes-combo-box .notes-combo-textarea {
+  display: block;
+  width: 100%;
+  min-height: 220px;
+  padding: 12px 14px;
+  font-size: 16px;
+  line-height: 1.5;
+  border: none;
+  border-radius: var(--radius);
+  background: #fff;
+  resize: vertical;
+  font-family: inherit;
+}
+
+.notes-page .notes-combo-box .notes-combo-textarea {
+  min-height: 260px;
+}
+
+.notes-combo-box .handwritten-canvas {
+  position: absolute;
+  left: 0;
+  top: 0;
+  width: 100%;
+  height: 100%;
+  pointer-events: none;
+  background: transparent;
+  touch-action: none;
+}
+
+.notes-combo-box.draw-mode .handwritten-canvas {
+  pointer-events: auto;
+  cursor: crosshair;
+}
+
+.notes-combo-box.draw-mode .notes-combo-textarea {
+  pointer-events: none;
+}
+
+.notes-combo-actions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 10px;
+  margin-top: 8px;
+}
+
+.notes-mode-btn {
+  padding: 8px 14px;
+  font-size: 0.9rem;
+  font-weight: 500;
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  background: #fff;
+  color: var(--text);
+  cursor: pointer;
+  -webkit-appearance: none;
+  appearance: none;
+}
+
+.notes-mode-btn.active {
+  background: var(--primary);
+  color: #fff;
+  border-color: var(--primary);
+}
+
+.btn-clear-canvas {
+  background: #fff5f5;
+  color: #c53030;
+  border: 1px solid #feb2b2;
+  font-size: 0.9rem;
+}
+
+.btn-clear-canvas:hover, .btn-clear-canvas:focus {
+  background: #fed7d7;
+}
+
 .form-section {
   background: var(--surface);
   border-radius: var(--radius);

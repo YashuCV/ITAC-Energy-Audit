@@ -82,7 +82,17 @@
     });
   }
 
+  function updateCanvasHiddenInputs() {
+    form.querySelectorAll('.handwritten-canvas').forEach(function (canvas) {
+      var field = canvas.getAttribute('data-field');
+      if (!field) return;
+      var hidden = form.querySelector('input[name="' + field + '_handwritten"]');
+      if (hidden) hidden.value = canvas.toDataURL('image/png');
+    });
+  }
+
   function getFormData() {
+    updateCanvasHiddenInputs();
     const data = { fields: {}, lightingRows: 1, powerMiscRows: 1, lighting: [], powerMisc: [] };
 
     const inputs = form.querySelectorAll('input, select, textarea');
@@ -174,6 +184,21 @@
         }
       });
     }
+    Object.keys(data.fields || {}).forEach(function (name) {
+      if (name.indexOf('_handwritten') === -1) return;
+      var val = (data.fields[name] || '').toString().trim();
+      if (!val) return;
+      var field = name.replace(/_handwritten$/, '');
+      var canvas = form.querySelector('.handwritten-canvas[data-field="' + field + '"]');
+      if (!canvas) return;
+      var ctx = canvas.getContext('2d');
+      var img = new Image();
+      img.onload = function () {
+        ctx.clearRect(0, 0, canvas.width, canvas.height);
+        ctx.drawImage(img, 0, 0);
+      };
+      img.src = val;
+    });
   }
 
   function showStatus(text, isSaving) {
@@ -308,6 +333,127 @@
     scheduleSave();
   }
 
+  function injectHandwrittenBlock(textareaEl) {
+    if (!textareaEl || (textareaEl.name.indexOf('notes_extra_') !== 0 && textareaEl.name.indexOf('notes_page_') !== 0)) return;
+    if (textareaEl.closest && textareaEl.closest('.notes-combo-box')) return;
+    var field = textareaEl.name;
+    var wrapper = document.createElement('div');
+    wrapper.className = 'notes-combo-box';
+    textareaEl.classList.add('notes-combo-textarea');
+    textareaEl.placeholder = 'Type with keyboard (typed in PDF) or switch to Draw and use Apple Pencil (ink in PDF).';
+    var parent = textareaEl.parentNode;
+    parent.insertBefore(wrapper, textareaEl);
+    wrapper.appendChild(textareaEl);
+    var canvas = document.createElement('canvas');
+    canvas.className = 'handwritten-canvas';
+    canvas.setAttribute('data-field', field);
+    canvas.setAttribute('width', '600');
+    canvas.setAttribute('height', '220');
+    wrapper.appendChild(canvas);
+    var hidden = document.createElement('input');
+    hidden.type = 'hidden';
+    hidden.name = field + '_handwritten';
+    wrapper.appendChild(hidden);
+    var actions = document.createElement('div');
+    actions.className = 'notes-combo-actions';
+    actions.innerHTML = '<button type="button" class="notes-mode-btn active" data-mode="type">Type (keyboard)</button>' +
+      '<button type="button" class="notes-mode-btn" data-mode="draw">Draw (pencil)</button>' +
+      '<button type="button" class="btn btn-clear-canvas" data-canvas-field="' + field + '">Clear handwriting</button>';
+    wrapper.appendChild(actions);
+    actions.querySelector('[data-mode="type"]').addEventListener('click', function () {
+      wrapper.classList.remove('draw-mode');
+      actions.querySelectorAll('.notes-mode-btn').forEach(function (b) { b.classList.toggle('active', b.getAttribute('data-mode') === 'type'); });
+    });
+    actions.querySelector('[data-mode="draw"]').addEventListener('click', function () {
+      wrapper.classList.add('draw-mode');
+      actions.querySelectorAll('.notes-mode-btn').forEach(function (b) { b.classList.toggle('active', b.getAttribute('data-mode') === 'draw'); });
+    });
+    actions.querySelector('.btn-clear-canvas').addEventListener('click', function () {
+      var ctx = canvas.getContext('2d');
+      if (ctx) {
+        ctx.fillStyle = '#fff';
+        ctx.fillRect(0, 0, canvas.width, canvas.height);
+      }
+      hidden.value = '';
+      scheduleSave();
+    });
+    if (canvas.getContext) initHandwrittenCanvas(canvas);
+  }
+
+  function initHandwrittenCanvas(canvas) {
+    var ctx = canvas.getContext('2d');
+    if (!ctx) return;
+    var box = canvas.closest('.notes-combo-box');
+    if (box) {
+      var r = box.getBoundingClientRect();
+      if (r.width > 0 && r.height > 0) {
+        canvas.width = Math.floor(r.width);
+        canvas.height = Math.floor(r.height);
+      } else {
+        canvas.width = 600;
+        canvas.height = 220;
+      }
+    }
+    var w = canvas.width;
+    var h = canvas.height;
+    ctx.fillStyle = '#fff';
+    ctx.fillRect(0, 0, w, h);
+    ctx.strokeStyle = '#000';
+    ctx.lineWidth = 2;
+    ctx.lineCap = 'round';
+    var drawing = false;
+    var lastX = 0;
+    var lastY = 0;
+
+    function getPos(e) {
+      var rect = canvas.getBoundingClientRect();
+      var scaleX = canvas.width / rect.width;
+      var scaleY = canvas.height / rect.height;
+      return { x: (e.clientX - rect.left) * scaleX, y: (e.clientY - rect.top) * scaleY };
+    }
+
+    function start(e) {
+      e.preventDefault();
+      drawing = true;
+      var p = getPos(e);
+      lastX = p.x;
+      lastY = p.y;
+    }
+    function move(e) {
+      e.preventDefault();
+      if (!drawing) return;
+      var p = getPos(e);
+      ctx.beginPath();
+      ctx.moveTo(lastX, lastY);
+      ctx.lineTo(p.x, p.y);
+      ctx.stroke();
+      lastX = p.x;
+      lastY = p.y;
+    }
+    function end(e) {
+      e.preventDefault();
+      if (drawing) {
+        updateCanvasHiddenInputs();
+        scheduleSave();
+      }
+      drawing = false;
+    }
+
+    canvas.addEventListener('pointerdown', start);
+    canvas.addEventListener('pointermove', move);
+    canvas.addEventListener('pointerup', end);
+    canvas.addEventListener('pointerleave', end);
+    canvas.addEventListener('touchstart', function (e) { e.preventDefault(); start(e.touches[0]); }, { passive: false });
+    canvas.addEventListener('touchmove', function (e) { e.preventDefault(); move(e.touches[0]); }, { passive: false });
+    canvas.addEventListener('touchend', function (e) { e.preventDefault(); end(e.changedTouches[0] || e.touches[0]); }, { passive: false });
+  }
+
+  function addHandwrittenCanvases() {
+    form.querySelectorAll('textarea[name^="notes_extra_"], textarea[name^="notes_page_"]').forEach(function (ta) {
+      injectHandwrittenBlock(ta);
+    });
+  }
+
   form.querySelectorAll('input, select, textarea').forEach((el) => {
     el.addEventListener('input', scheduleSave);
     el.addEventListener('change', scheduleSave);
@@ -347,6 +493,18 @@
       if (countInput) countInput.value = '1';
       const pages = container.querySelectorAll('.notes-page');
       for (let i = 1; i < pages.length; i++) pages[i].remove();
+    });
+    form.querySelectorAll('.handwritten-canvas').forEach(function (canvas) {
+      var ctx = canvas.getContext('2d');
+      if (ctx) {
+        ctx.fillStyle = '#fff';
+        ctx.fillRect(0, 0, canvas.width, canvas.height);
+      }
+      var field = canvas.getAttribute('data-field');
+      if (field) {
+        var h = form.querySelector('input[name="' + field + '_handwritten"]');
+        if (h) h.value = '';
+      }
     });
     if (useIndexedDB) {
       idb().then((db) => {
@@ -484,7 +642,28 @@
       y += 4;
     }
 
-    return { doc, margin, y: () => y, setY: (v) => { y = v; }, addLine, addSectionTitle, addSubTitle, fieldVal, drawTable, newPage, lineH };
+    function addImageFromUrl(dataUrl, maxW) {
+      return new Promise(function (resolve) {
+        var img = new Image();
+        img.onload = function () {
+          var m = margin;
+          var pageW = doc.internal.pageSize.getWidth();
+          var maxWidth = maxW != null ? maxW : (pageW - 2 * m);
+          var iw = img.naturalWidth;
+          var ih = img.naturalHeight;
+          var w = Math.min(maxWidth, iw);
+          var h = ih * (w / iw);
+          if (y + h > 276) newPage();
+          doc.addImage(dataUrl, 'PNG', m, y, w, h);
+          y += h + 5;
+          resolve(h);
+        };
+        img.onerror = function () { resolve(0); };
+        img.src = dataUrl;
+      });
+    }
+
+    return { doc, margin, y: () => y, setY: (v) => { y = v; }, addLine, addSectionTitle, addSubTitle, fieldVal, drawTable, newPage, lineH, addImageFromUrl };
   }
 
   const PDF_LABELS = {
@@ -624,8 +803,8 @@
     return false;
   }
 
-  function addSectionNotesToPdf(ctx, sectionId, sectionLabel, data) {
-    const { addLine, addSubTitle } = ctx;
+  async function await addSectionNotesToPdf(ctx, sectionId, sectionLabel, data) {
+    const { addLine, addSubTitle, addImageFromUrl } = ctx;
     const fields = data.fields || {};
     const val = (name) => (fields[name] || '').toString().trim();
     const extra = val('notes_extra_' + sectionId);
@@ -633,12 +812,22 @@
       addSubTitle('Extra points / key notes');
       addLine(extra);
     }
+    const extraHand = val('notes_extra_' + sectionId + '_handwritten');
+    if (extraHand) {
+      addSubTitle('Handwritten note (ink)');
+      await addImageFromUrl(extraHand);
+    }
     const count = parseInt(fields['notes_page_count_' + sectionId], 10) || 0;
     for (let i = 0; i < count; i++) {
       const pageText = val('notes_page_' + sectionId + '_' + i);
       if (pageText) {
         addSubTitle('Notes page ' + (i + 1));
         addLine(pageText);
+      }
+      const pageHand = val('notes_page_' + sectionId + '_' + i + '_handwritten');
+      if (pageHand) {
+        addSubTitle('Handwritten (ink) – page ' + (i + 1));
+        await addImageFromUrl(pageHand);
       }
     }
   }
@@ -685,14 +874,14 @@
       addSectionTitle(sectionNum + '. General Facility Information');
       const generalFields = ['site_visit_date', 'facility_name', 'facility_location', 'facility_area', 'contact1_name', 'contact1_phone', 'contact1_email', 'contact2_name', 'contact2_phone', 'contact2_email', 'num_employees', 'production_schedule', 'office_schedule', 'major_products', 'annual_sales', 'raw_materials', 'final_wastes', 'labor_rates'];
       generalFields.forEach((n) => addLine(labelFor(n) + ': ' + fieldVal(n)));
-      addSectionNotesToPdf(ctx, 'general', 'General', data);
+      await addSectionNotesToPdf(ctx, 'general', 'General', data);
     }
     if (hasSectionContent('utility', data)) {
       sectionNum++;
       addSectionTitle(sectionNum + '. Utility Consumption');
       const utilityFields = ['electricity_supplier', 'electricity_kwh_charge', 'electricity_demand_charge', 'power_factor', 'gas_supplier', 'gas_cost', 'water_supplier', 'water_cost', 'fuel_oil_consumption', 'solar_pv_capacity', 'renewable_capacity'];
       utilityFields.forEach((n) => addLine(labelFor(n) + ': ' + fieldVal(n)));
-      addSectionNotesToPdf(ctx, 'utility', 'Utility', data);
+      await addSectionNotesToPdf(ctx, 'utility', 'Utility', data);
     }
 
     if (hasSectionContent('lighting', data)) {
@@ -706,7 +895,7 @@
         const k = lightingCols[ci] + '_' + rowIndex;
         return row[k] != null ? row[k] : (row[lightingCols[ci]] || '');
       });
-      addSectionNotesToPdf(ctx, 'lighting', 'Lighting', data);
+      await addSectionNotesToPdf(ctx, 'lighting', 'Lighting', data);
     }
 
     if (hasSectionContent('hvac', data)) {
@@ -726,7 +915,7 @@
       drawTable(hvacHeaders, hvacRows, (row, ci) => (ci === 0 ? row[0] : fieldVal(row[ci])));
       addSubTitle('General Information about heating/cooling');
       ['hvac_thermostat_count', 'hvac_spt_summer', 'hvac_spt_winter', 'hvac_sbt_summer', 'hvac_sbt_winter', 'hvac_destrat_fans', 'hvac_calibration_date', 'hvac_maintenance_freq', 'hvac_last_maintenance', 'hvac_maintenance_duration', 'hvac_maintenance_tasks'].forEach((n) => addLine(labelFor(n) + ': ' + fieldVal(n)));
-      addSectionNotesToPdf(ctx, 'hvac', 'HVAC', data);
+      await addSectionNotesToPdf(ctx, 'hvac', 'HVAC', data);
     }
 
     if (hasSectionContent('compressed_air', data)) {
@@ -750,7 +939,7 @@
       drawTable(comHeaders, comRows, (row, ci) => (ci === 0 ? row[0] : fieldVal(row[ci])));
       addSubTitle('General Information of usage');
       ['com_plans_change', 'com_ventilated', 'com_receiver', 'com_header_storage', 'com_secondary_storage', 'com_loop_dist', 'com_maintenance_interval', 'com_last_leak', 'com_maint_activities', 'com_leaks_observed', 'com_leaks_count', 'com_leaks_db', 'com_leaks_size'].forEach((n) => addLine(labelFor(n) + ': ' + fieldVal(n)));
-      addSectionNotesToPdf(ctx, 'compressed_air', 'Compressed Air', data);
+      await addSectionNotesToPdf(ctx, 'compressed_air', 'Compressed Air', data);
     }
 
     if (hasSectionContent('boiler', data)) {
@@ -776,7 +965,7 @@
       drawTable(boilerHeaders, boilerRows, (row, ci) => (ci === 0 ? row[0] : fieldVal(row[ci])));
       addSubTitle('General Information');
       ['boiler_maint_time', 'boiler_maint_interval', 'boiler_condensate', 'boiler_blowdown', 'boiler_insulation', 'boiler_heat_recovery'].forEach((n) => addLine(labelFor(n) + ': ' + fieldVal(n)));
-      addSectionNotesToPdf(ctx, 'boiler', 'Boiler', data);
+      await addSectionNotesToPdf(ctx, 'boiler', 'Boiler', data);
     }
 
     if (hasSectionContent('envelope', data)) {
@@ -802,7 +991,7 @@
       envChecks.forEach((n, i) => addLine(envLabels[i] + ': ' + (fieldVal(n) || '') + (fieldVal(n + '_note') ? ' (Note: ' + fieldVal(n + '_note') + ')' : '')));
       addSubTitle('Detailed Information');
       ['env_wall_detail', 'env_insulation_detail', 'env_wall_thick_detail', 'env_wall_temp', 'env_roof_area', 'env_roof_materials', 'env_roof_temp', 'env_roof_thick', 'env_insulation_age'].forEach((n) => addLine(labelFor(n) + ': ' + fieldVal(n)));
-      addSectionNotesToPdf(ctx, 'envelope', 'Building Envelope', data);
+      await addSectionNotesToPdf(ctx, 'envelope', 'Building Envelope', data);
     }
 
     if (hasSectionContent('power', data)) {
@@ -837,7 +1026,7 @@
         const k = pwrMiscCols[ci] + '_' + rowIndex;
         return row[k] != null ? row[k] : (row[pwrMiscCols[ci]] || '');
       });
-      addSectionNotesToPdf(ctx, 'power', 'Power', data);
+      await addSectionNotesToPdf(ctx, 'power', 'Power', data);
     }
 
     if (hasSectionContent('chillers', data)) {
@@ -849,7 +1038,7 @@
       addSubTitle('Detailed Information');
       addLine(labelFor('chiller_op_time') + ': ' + fieldVal('chiller_op_time'));
       addLine(labelFor('chiller_efficiency') + ': ' + fieldVal('chiller_efficiency'));
-      addSectionNotesToPdf(ctx, 'chillers', 'Chillers', data);
+      await addSectionNotesToPdf(ctx, 'chillers', 'Chillers', data);
     }
 
     if (hasSectionContent('generator', data)) {
@@ -885,7 +1074,7 @@
         ['RH (%)', 'gen_rh_1', 'gen_rh_2', 'gen_rh_3', 'gen_rh_4']
       ];
       drawTable(flueHeaders, flueRows, (row, ci) => (ci === 0 ? row[0] : fieldVal(row[ci])));
-      addSectionNotesToPdf(ctx, 'generator', 'Generator', data);
+      await addSectionNotesToPdf(ctx, 'generator', 'Generator', data);
     }
 
     const totalPages = doc.internal.getNumberOfPages();
@@ -942,6 +1131,7 @@
     container.insertBefore(pageDiv, addBtn);
 
     pageDiv.querySelector('textarea').addEventListener('input', scheduleSave);
+    injectHandwrittenBlock(pageDiv.querySelector('textarea'));
     scheduleSave();
   }
 
@@ -970,6 +1160,7 @@
       const val = (data.fields && data.fields['notes_page_' + sectionId + '_' + nextIndex]) || '';
       pageDiv.querySelector('textarea').value = val;
       pageDiv.querySelector('textarea').addEventListener('input', scheduleSave);
+      injectHandwrittenBlock(pageDiv.querySelector('textarea'));
       currentCount++;
     }
   }
@@ -982,8 +1173,24 @@
       const count = parseInt(data.fields['notes_page_count_' + sectionId], 10) || 1;
       ensureNotesPagesForSection(sectionId, count, data);
     });
+    Object.keys(data.fields || {}).forEach(function (name) {
+      if (name.indexOf('_handwritten') === -1) return;
+      var val = (data.fields[name] || '').toString().trim();
+      if (!val) return;
+      var field = name.replace(/_handwritten$/, '');
+      var canvas = form.querySelector('.handwritten-canvas[data-field="' + field + '"]');
+      if (!canvas) return;
+      var ctx = canvas.getContext('2d');
+      var img = new Image();
+      img.onload = function () {
+        ctx.clearRect(0, 0, canvas.width, canvas.height);
+        ctx.drawImage(img, 0, 0);
+      };
+      img.src = val;
+    });
   };
 
+  addHandwrittenCanvases();
   initTabs();
   load();
   }

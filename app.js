@@ -29,7 +29,6 @@
 
   const saveStatus = document.getElementById('saveStatus');
   const downloadPdfBtn = document.getElementById('downloadPdf');
-  const downloadPdfBottom = document.getElementById('downloadPdfBottom');
   const resetFormBtn = document.getElementById('resetForm');
   const lightingBody = document.getElementById('lightingBody');
   const addLightingRowBtn = document.getElementById('addLightingRow');
@@ -420,9 +419,11 @@
     if (textareaEl.closest && textareaEl.closest('.notes-combo-box')) return;
     var field = textareaEl.name;
     var wrapper = document.createElement('div');
-    wrapper.className = 'notes-combo-box';
+    wrapper.className = 'notes-combo-box draw-mode';
     textareaEl.classList.add('notes-combo-textarea');
-    textareaEl.placeholder = 'Type with keyboard (typed in PDF) or switch to Draw and use Apple Pencil (ink in PDF).';
+    textareaEl.placeholder = 'Use Apple Pencil or finger to draw handwritten notes (appears as ink in PDF).';
+    textareaEl.readOnly = true;
+    textareaEl.disabled = true;
     var parent = textareaEl.parentNode;
     parent.insertBefore(wrapper, textareaEl);
     wrapper.appendChild(textareaEl);
@@ -438,18 +439,8 @@
     wrapper.appendChild(hidden);
     var actions = document.createElement('div');
     actions.className = 'notes-combo-actions';
-    actions.innerHTML = '<button type="button" class="notes-mode-btn active" data-mode="type">Type (keyboard)</button>' +
-      '<button type="button" class="notes-mode-btn" data-mode="draw">Draw (pencil)</button>' +
-      '<button type="button" class="btn btn-clear-canvas" data-canvas-field="' + field + '">Clear handwriting</button>';
+    actions.innerHTML = '<button type="button" class="btn btn-clear-canvas" data-canvas-field="' + field + '">Clear handwriting</button>';
     wrapper.appendChild(actions);
-    actions.querySelector('[data-mode="type"]').addEventListener('click', function () {
-      wrapper.classList.remove('draw-mode');
-      actions.querySelectorAll('.notes-mode-btn').forEach(function (b) { b.classList.toggle('active', b.getAttribute('data-mode') === 'type'); });
-    });
-    actions.querySelector('[data-mode="draw"]').addEventListener('click', function () {
-      wrapper.classList.add('draw-mode');
-      actions.querySelectorAll('.notes-mode-btn').forEach(function (b) { b.classList.toggle('active', b.getAttribute('data-mode') === 'draw'); });
-    });
     actions.querySelector('.btn-clear-canvas').addEventListener('click', function () {
       var ctx = canvas.getContext('2d');
       if (ctx) {
@@ -607,7 +598,6 @@
   }
 
   resetFormBtn.addEventListener('click', resetForm);
-  document.getElementById('resetFormBottom').addEventListener('click', resetForm);
 
   function loadImageAsBase64(url) {
     return fetch(url).then((r) => r.blob()).then((blob) => {
@@ -1226,7 +1216,6 @@
   }
 
   downloadPdfBtn.addEventListener('click', downloadPdf);
-  downloadPdfBottom.addEventListener('click', downloadPdf);
 
   if ('serviceWorker' in navigator) {
     navigator.serviceWorker.register('sw.js').catch(() => {});

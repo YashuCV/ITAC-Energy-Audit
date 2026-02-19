@@ -234,7 +234,7 @@
         <h2>Compressed Air System</h2>
         <label>Number of existing compressors <input type="text" name="compressor_count" inputmode="numeric"></label>
         <div class="table-wrapper">
-          <table class="data-table">
+          <table class="data-table" id="compressedAirTable">
             <thead><tr><th>Parameters</th><th>Com-1</th><th>Com-2</th><th>Com-3</th></tr></thead>
             <tbody>
               <tr><td>Type (rotary/reciprocating/screw)</td><td><input type="text" name="com_type_1"></td><td><input type="text" name="com_type_2"></td><td><input type="text" name="com_type_3"></td></tr>
@@ -289,7 +289,7 @@
       <section class="form-section tab-panel" data-section="boiler" id="panel-boiler" role="tabpanel" aria-labelledby="tab-boiler">
         <h2>Boiler System</h2>
         <div class="table-wrapper">
-          <table class="data-table">
+          <table class="data-table" id="boilerTable">
             <thead><tr><th>Parameters</th><th>B-1</th><th>B-2</th><th>B-3</th><th>B-4</th></tr></thead>
             <tbody>
               <tr><td>Brand</td><td><input type="text" name="boiler_brand_1"></td><td><input type="text" name="boiler_brand_2"></td><td><input type="text" name="boiler_brand_3"></td><td><input type="text" name="boiler_brand_4"></td></tr>
@@ -433,7 +433,7 @@
       <section class="form-section tab-panel" data-section="chillers" id="panel-chillers" role="tabpanel" aria-labelledby="tab-chillers">
         <h2>Chillers / Cooling Tower</h2>
         <div class="table-wrapper">
-          <table class="data-table">
+          <table class="data-table" id="chillersTable">
             <thead><tr><th>Number of units</th><th>Brand/Model</th><th>Estimated age</th><th>Capacity/Size</th><th>Temp IN (°F)</th><th>Temp OUT (°F)</th><th>Wet bulb temp (°F)</th></tr></thead>
             <tbody>
               <tr><td><input type="text" name="chiller_units"></td><td><input type="text" name="chiller_brand"></td><td><input type="text" name="chiller_age"></td><td><input type="text" name="chiller_cap"></td><td><input type="text" name="chiller_temp_in" inputmode="decimal"></td><td><input type="text" name="chiller_temp_out" inputmode="decimal"></td><td><input type="text" name="chiller_wet_bulb" inputmode="decimal"></td></tr>
@@ -467,7 +467,7 @@
         <h2>Generator</h2>
         <label>Backup generator? (Y/N) <input type="text" name="gen_has_backup" placeholder="Y/N"></label>
         <div class="table-wrapper">
-          <table class="data-table">
+          <table class="data-table" id="generatorTable">
             <thead><tr><th>Parameters</th><th>Gen-1</th><th>Gen-2</th><th>Gen-3</th><th>Gen-4</th></tr></thead>
             <tbody>
               <tr><td>Brand</td><td><input type="text" name="gen_brand_1"></td><td><input type="text" name="gen_brand_2"></td><td><input type="text" name="gen_brand_3"></td><td><input type="text" name="gen_brand_4"></td></tr>
@@ -486,7 +486,7 @@
         </div>
         <h3>Flue Gas Analysis</h3>
         <div class="table-wrapper">
-          <table class="data-table">
+          <table class="data-table" id="generatorFlueTable">
             <thead><tr><th>Parameters</th><th>Gen-1</th><th>Gen-2</th><th>Gen-3</th><th>Gen-4</th></tr></thead>
             <tbody>
               <tr><td>O2 (%)</td><td><input type="text" name="gen_o2_1"></td><td><input type="text" name="gen_o2_2"></td><td><input type="text" name="gen_o2_3"></td><td><input type="text" name="gen_o2_4"></td></tr>
@@ -517,12 +517,6 @@
         </div>
       </section>
 
-      <div class="form-actions">
-        <button type="button" class="btn btn-reset btn-large" id="resetFormBottom">Reset for next audit</button>
-        <button type="button" class="btn btn-download btn-large" id="downloadPdfBottom">
-          Download form as PDF
-        </button>
-      </div>
     </form>
   </main>
 

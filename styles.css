@@ -370,6 +370,10 @@ body {
   font-family: inherit;
   position: relative;
   z-index: 1;
+  pointer-events: none;
+  user-select: none;
+  color: transparent;
+  caret-color: transparent;
 }
 
 .notes-page .notes-combo-box .notes-combo-textarea {
@@ -392,14 +396,10 @@ body {
   height: 260px;
 }
 
-.notes-combo-box.draw-mode .handwritten-canvas {
+.notes-combo-box.draw-mode .handwritten-canvas,
+.notes-combo-box .handwritten-canvas {
   pointer-events: auto;
   cursor: crosshair;
-}
-
-.notes-combo-box.draw-mode .notes-combo-textarea {
-  pointer-events: none;
-  user-select: none;
 }
 
 .notes-combo-actions {
@@ -537,6 +537,7 @@ input::placeholder {
   min-width: 600px;
   border-collapse: collapse;
   font-size: 14px;
+  table-layout: fixed;
 }
 
 .data-table th,
@@ -545,6 +546,34 @@ input::placeholder {
   border: 1px solid var(--border);
   text-align: left;
   vertical-align: top;
+}
+
+/* Equal width columns for specific tables */
+#hvacTable th,
+#hvacTable td {
+  width: 20%;
+}
+
+#compressedAirTable th,
+#compressedAirTable td {
+  width: 25%;
+}
+
+#boilerTable th,
+#boilerTable td {
+  width: 20%;
+}
+
+#chillersTable th,
+#chillersTable td {
+  width: calc(100% / 7);
+}
+
+#generatorTable th,
+#generatorTable td,
+#generatorFlueTable th,
+#generatorFlueTable td {
+  width: 20%;
 }
 
 .data-table th {

@@ -683,33 +683,46 @@
       const colCount = headers.length;
       const tableW = pageW - 2 * margin;
       const colW = tableW / colCount;
-      const rowH = 6;
+      const lineHeight = 4;
+      const minRowH = 6;
       const fontSize = 7;
       doc.setFontSize(fontSize);
-      if (y + (rows.length + 1) * rowH > 278) newPage();
       let x = margin;
-      // Header row (no fill, just light border and bold text)
+      // Header row – allow wrapping
       doc.setDrawColor(borderColor[0], borderColor[1], borderColor[2]);
-      headers.forEach((h) => {
-        doc.rect(x, y, colW, rowH, 'S');
+      const headerLines = headers.map((h) => doc.splitTextToSize(String(h), colW - 2 * cellPad));
+      const headerRowH = Math.max(minRowH, Math.max(...headerLines.map((arr) => arr.length)) * lineHeight);
+      if (y + headerRowH > 276) newPage();
+      headers.forEach((h, ci) => {
+        doc.rect(x, y, colW, headerRowH, 'S');
         doc.setFont('helvetica', 'bold');
         doc.setTextColor(40, 40, 40);
-        const txt = doc.splitTextToSize(String(h), colW - 2 * cellPad);
-        doc.text(txt[0] || '', x + cellPad, y + rowH - 2);
+        const txt = headerLines[ci];
+        (txt || []).forEach((line, li) => {
+          doc.text(line || '', x + cellPad, y + cellPad + (li + 1) * lineHeight);
+        });
         x += colW;
       });
-      y += rowH;
+      y += headerRowH;
       doc.setFont('helvetica', 'normal');
       doc.setTextColor(30, 30, 30);
       rows.forEach((row, rowIndex) => {
+        const cellLines = [];
+        for (let ci = 0; ci < colCount; ci++) {
+          const cellText = getCell(row, ci, rowIndex);
+          cellLines.push(doc.splitTextToSize(String(cellText || ''), colW - 2 * cellPad));
+        }
+        const maxLines = Math.max(1, ...cellLines.map((arr) => arr.length));
+        const rowH = Math.max(minRowH, maxLines * lineHeight);
+        if (y + rowH > 276) newPage();
         x = margin;
-        if (y > 276) newPage();
         headers.forEach((_, ci) => {
           doc.setDrawColor(borderColor[0], borderColor[1], borderColor[2]);
           doc.rect(x, y, colW, rowH, 'S');
-          const cellText = getCell(row, ci, rowIndex);
-          const txt = doc.splitTextToSize(String(cellText || ''), colW - 2 * cellPad);
-          doc.text(txt[0] || '', x + cellPad, y + rowH - 2);
+          const txt = cellLines[ci] || [];
+          txt.forEach((line, li) => {
+            doc.text(line || '', x + cellPad, y + cellPad + (li + 1) * lineHeight);
+          });
           x += colW;
         });
         y += rowH;

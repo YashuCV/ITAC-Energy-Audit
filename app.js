@@ -119,8 +119,45 @@
       var field = canvas.getAttribute('data-field');
       if (!field) return;
       var hidden = form.querySelector('input[name="' + field + '_handwritten"]');
-      if (hidden) hidden.value = canvas.toDataURL('image/png');
+      if (hidden) {
+        try {
+          if (canvasHasContent(canvas)) {
+            var dataUrl = canvas.toDataURL('image/png', 1.0);
+            if (dataUrl && dataUrl !== 'data:,') {
+              hidden.value = dataUrl;
+            }
+          }
+        } catch (e) {
+          console.warn('Failed to save canvas data for', field, e);
+        }
+      }
     });
+  }
+
+  function canvasHasContent(canvas) {
+    if (!canvas || !canvas.getContext) return false;
+    try {
+      var ctx = canvas.getContext('2d');
+      if (!ctx) return false;
+      var imageData = ctx.getImageData(0, 0, Math.min(canvas.width, 1000), Math.min(canvas.height, 1000));
+      var data = imageData.data;
+      var nonWhitePixels = 0;
+      for (var i = 0; i < data.length; i += 4) {
+        var r = data[i];
+        var g = data[i + 1];
+        var b = data[i + 2];
+        var a = data[i + 3];
+        if (a > 10 && (r < 240 || g < 240 || b < 240)) {
+          nonWhitePixels++;
+          if (nonWhitePixels > 50) {
+            return true;
+          }
+        }
+      }
+      return false;
+    } catch (e) {
+      return false;
+    }
   }
 
   function getFormData() {
@@ -416,15 +453,21 @@
     var ctx = canvas.getContext('2d');
     if (!ctx) return;
     var box = canvas.closest('.notes-combo-box');
-    if (box) {
-      var r = box.getBoundingClientRect();
+    var textarea = box ? box.querySelector('.notes-combo-textarea') : null;
+    if (box && textarea) {
+      var r = textarea.getBoundingClientRect();
       if (r.width > 0 && r.height > 0) {
         canvas.width = Math.floor(r.width);
         canvas.height = Math.floor(r.height);
+        canvas.style.width = r.width + 'px';
+        canvas.style.height = r.height + 'px';
       } else {
         canvas.width = 600;
         canvas.height = 220;
       }
+    } else {
+      canvas.width = 600;
+      canvas.height = 220;
     }
     var w = canvas.width;
     var h = canvas.height;
@@ -840,26 +883,24 @@
     const fields = data.fields || {};
     const val = (name) => (fields[name] || '').toString().trim();
     const extra = val('notes_extra_' + sectionId);
-    if (extra) {
-      addSubTitle('Extra points / key notes');
-      addLine(extra);
-    }
     const extraHand = val('notes_extra_' + sectionId + '_handwritten');
-    if (extraHand) {
+    if (extraHand && extraHand.length > 100) {
       addSubTitle('Handwritten note (ink)');
       await addImageFromUrl(extraHand);
+    } else if (extra) {
+      addSubTitle('Extra points / key notes');
+      addLine(extra);
     }
     const count = parseInt(fields['notes_page_count_' + sectionId], 10) || 0;
     for (let i = 0; i < count; i++) {
       const pageText = val('notes_page_' + sectionId + '_' + i);
-      if (pageText) {
-        addSubTitle('Notes page ' + (i + 1));
-        addLine(pageText);
-      }
       const pageHand = val('notes_page_' + sectionId + '_' + i + '_handwritten');
-      if (pageHand) {
+      if (pageHand && pageHand.length > 100) {
         addSubTitle('Handwritten (ink) – page ' + (i + 1));
         await addImageFromUrl(pageHand);
+      } else if (pageText) {
+        addSubTitle('Notes page ' + (i + 1));
+        addLine(pageText);
       }
     }
   }
@@ -1125,6 +1166,26 @@
   async function downloadPdf() {
     try {
       saveStatus.textContent = 'Preparing PDF…';
+      updateCanvasHiddenInputs();
+      form.querySelectorAll('.handwritten-canvas').forEach(function (canvas) {
+        var field = canvas.getAttribute('data-field');
+        if (!field) return;
+        var hidden = form.querySelector('input[name="' + field + '_handwritten"]');
+        if (hidden) {
+          try {
+            if (canvasHasContent(canvas)) {
+              var dataUrl = canvas.toDataURL('image/png', 1.0);
+              if (dataUrl && dataUrl !== 'data:,') {
+                hidden.value = dataUrl;
+              }
+            } else {
+              hidden.value = '';
+            }
+          } catch (e) {
+            console.warn('Failed to save canvas for PDF', field, e);
+          }
+        }
+      });
       const doc = await buildPdfFull();
       const facility = (getFormData().fields.facility_name || 'Form').replace(/\s+/g, '-');
       const name = 'ITAC-Energy-Audit-' + facility + '-' + new Date().toISOString().slice(0, 10) + '.pdf';

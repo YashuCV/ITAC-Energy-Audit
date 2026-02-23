@@ -630,7 +630,7 @@
       y = 14;
     }
 
-    function addLine(text, bold, fontSize) {
+    function addLine(text, bold, fontSize, addSpaceAfter) {
       if (y > 276) newPage();
       doc.setFontSize(fontSize || 9);
       doc.setFont('helvetica', bold ? 'bold' : 'normal');
@@ -640,6 +640,9 @@
         doc.text(line, margin, y);
         y += lineH;
       });
+      if (addSpaceAfter) {
+        y += lineH;
+      }
     }
 
     function addSectionTitle(title) {
@@ -686,20 +689,26 @@
       const lineHeight = 4;
       const minRowH = 6;
       const fontSize = 7;
+      const pad = 2 * cellPad;
       doc.setFontSize(fontSize);
       let x = margin;
-      // Header row – allow wrapping
+      // Header row – allow wrapping, row height includes padding so last line stays inside
       doc.setDrawColor(borderColor[0], borderColor[1], borderColor[2]);
-      const headerLines = headers.map((h) => doc.splitTextToSize(String(h), colW - 2 * cellPad));
-      const headerRowH = Math.max(minRowH, Math.max(...headerLines.map((arr) => arr.length)) * lineHeight);
+      const headerLines = headers.map((h) => doc.splitTextToSize(String(h), colW - pad));
+      const headerMaxLines = Math.max(1, ...headerLines.map((arr) => arr.length));
+      const headerRowH = Math.max(minRowH, pad + headerMaxLines * lineHeight);
       if (y + headerRowH > 276) newPage();
       headers.forEach((h, ci) => {
         doc.rect(x, y, colW, headerRowH, 'S');
         doc.setFont('helvetica', 'bold');
         doc.setTextColor(40, 40, 40);
-        const txt = headerLines[ci];
-        (txt || []).forEach((line, li) => {
-          doc.text(line || '', x + cellPad, y + cellPad + (li + 1) * lineHeight);
+        const txt = headerLines[ci] || [];
+        const blockH = txt.length * lineHeight;
+        const startY = y + (headerRowH - blockH) / 2 + lineHeight;
+        txt.forEach((line, li) => {
+          const lineStr = line || '';
+          const tw = doc.getTextWidth(lineStr);
+          doc.text(lineStr, x + (colW - tw) / 2, startY + li * lineHeight);
         });
         x += colW;
       });
@@ -710,18 +719,22 @@
         const cellLines = [];
         for (let ci = 0; ci < colCount; ci++) {
           const cellText = getCell(row, ci, rowIndex);
-          cellLines.push(doc.splitTextToSize(String(cellText || ''), colW - 2 * cellPad));
+          cellLines.push(doc.splitTextToSize(String(cellText || ''), colW - pad));
         }
         const maxLines = Math.max(1, ...cellLines.map((arr) => arr.length));
-        const rowH = Math.max(minRowH, maxLines * lineHeight);
+        const rowH = Math.max(minRowH, pad + maxLines * lineHeight);
         if (y + rowH > 276) newPage();
         x = margin;
         headers.forEach((_, ci) => {
           doc.setDrawColor(borderColor[0], borderColor[1], borderColor[2]);
           doc.rect(x, y, colW, rowH, 'S');
           const txt = cellLines[ci] || [];
+          const blockH = txt.length * lineHeight;
+          const startY = y + (rowH - blockH) / 2 + lineHeight;
           txt.forEach((line, li) => {
-            doc.text(line || '', x + cellPad, y + cellPad + (li + 1) * lineHeight);
+            const lineStr = line || '';
+            const tw = doc.getTextWidth(lineStr);
+            doc.text(lineStr, x + (colW - tw) / 2, startY + li * lineHeight);
           });
           x += colW;
         });
@@ -965,14 +978,14 @@
       sectionNum++;
       addSectionTitle(sectionNum + '. General Facility Information');
       const generalFields = ['site_visit_date', 'facility_name', 'facility_location', 'facility_area', 'contact1_name', 'contact1_phone', 'contact1_email', 'contact2_name', 'contact2_phone', 'contact2_email', 'num_employees', 'production_schedule', 'office_schedule', 'major_products', 'annual_sales', 'raw_materials', 'final_wastes', 'labor_rates'];
-      generalFields.forEach((n) => addLine(labelFor(n) + ': ' + fieldVal(n)));
+      generalFields.forEach((n) => addLine(labelFor(n) + ': ' + fieldVal(n), false, 9, true));
       await addSectionNotesToPdf(ctx, 'general', 'General', data);
     }
     if (hasSectionContent('utility', data)) {
       sectionNum++;
       addSectionTitle(sectionNum + '. Utility Consumption');
       const utilityFields = ['electricity_supplier', 'electricity_kwh_charge', 'electricity_demand_charge', 'power_factor', 'gas_supplier', 'gas_cost', 'water_supplier', 'water_cost', 'fuel_oil_consumption', 'solar_pv_capacity', 'renewable_capacity'];
-      utilityFields.forEach((n) => addLine(labelFor(n) + ': ' + fieldVal(n)));
+      utilityFields.forEach((n) => addLine(labelFor(n) + ': ' + fieldVal(n), false, 9, true));
       await addSectionNotesToPdf(ctx, 'utility', 'Utility', data);
     }
 
@@ -993,7 +1006,7 @@
     if (hasSectionContent('hvac', data)) {
       sectionNum++;
       addSectionTitle(sectionNum + '. HVAC System');
-      addLine(labelFor('hvac_system_type') + ': ' + fieldVal('hvac_system_type'));
+      addLine(labelFor('hvac_system_type') + ': ' + fieldVal('hvac_system_type'), false, 9, true);
       const hvacHeaders = ['Parameter', 'HVAC-1', 'HVAC-2', 'HVAC-3', 'HVAC-4'];
       const hvacRows = [
         ['S/N of HVAC', 'hvac_sn_1', 'hvac_sn_2', 'hvac_sn_3', 'hvac_sn_4'],
@@ -1006,14 +1019,14 @@
       ];
       drawTable(hvacHeaders, hvacRows, (row, ci) => (ci === 0 ? row[0] : fieldVal(row[ci])));
       addSubTitle('General Information about heating/cooling');
-      ['hvac_thermostat_count', 'hvac_spt_summer', 'hvac_spt_winter', 'hvac_sbt_summer', 'hvac_sbt_winter', 'hvac_destrat_fans', 'hvac_calibration_date', 'hvac_maintenance_freq', 'hvac_last_maintenance', 'hvac_maintenance_duration', 'hvac_maintenance_tasks'].forEach((n) => addLine(labelFor(n) + ': ' + fieldVal(n)));
+      ['hvac_thermostat_count', 'hvac_spt_summer', 'hvac_spt_winter', 'hvac_sbt_summer', 'hvac_sbt_winter', 'hvac_destrat_fans', 'hvac_calibration_date', 'hvac_maintenance_freq', 'hvac_last_maintenance', 'hvac_maintenance_duration', 'hvac_maintenance_tasks'].forEach((n) => addLine(labelFor(n) + ': ' + fieldVal(n), false, 9, true));
       await addSectionNotesToPdf(ctx, 'hvac', 'HVAC', data);
     }
 
     if (hasSectionContent('compressed_air', data)) {
       sectionNum++;
       addSectionTitle(sectionNum + '. Compressed Air System');
-      addLine('Number of existing compressors: ' + fieldVal('compressor_count'));
+      addLine('Number of existing compressors: ' + fieldVal('compressor_count'), false, 9, true);
       const comHeaders = ['Parameters', 'Com-1', 'Com-2', 'Com-3'];
       const comRows = [
         ['Compressor Type – rotary / reciprocating / screw', 'com_type_1', 'com_type_2', 'com_type_3'],
@@ -1030,7 +1043,7 @@
       ];
       drawTable(comHeaders, comRows, (row, ci) => (ci === 0 ? row[0] : fieldVal(row[ci])));
       addSubTitle('General Information of usage');
-      ['com_plans_change', 'com_ventilated', 'com_receiver', 'com_header_storage', 'com_secondary_storage', 'com_loop_dist', 'com_maintenance_interval', 'com_last_leak', 'com_maint_activities', 'com_leaks_observed', 'com_leaks_count', 'com_leaks_db', 'com_leaks_size'].forEach((n) => addLine(labelFor(n) + ': ' + fieldVal(n)));
+      ['com_plans_change', 'com_ventilated', 'com_receiver', 'com_header_storage', 'com_secondary_storage', 'com_loop_dist', 'com_maintenance_interval', 'com_last_leak', 'com_maint_activities', 'com_leaks_observed', 'com_leaks_count', 'com_leaks_db', 'com_leaks_size'].forEach((n) => addLine(labelFor(n) + ': ' + fieldVal(n), false, 9, true));
       await addSectionNotesToPdf(ctx, 'compressed_air', 'Compressed Air', data);
     }
 
@@ -1056,7 +1069,7 @@
       ];
       drawTable(boilerHeaders, boilerRows, (row, ci) => (ci === 0 ? row[0] : fieldVal(row[ci])));
       addSubTitle('General Information');
-      ['boiler_maint_time', 'boiler_maint_interval', 'boiler_condensate', 'boiler_blowdown', 'boiler_insulation', 'boiler_heat_recovery'].forEach((n) => addLine(labelFor(n) + ': ' + fieldVal(n)));
+      ['boiler_maint_time', 'boiler_maint_interval', 'boiler_condensate', 'boiler_blowdown', 'boiler_insulation', 'boiler_heat_recovery'].forEach((n) => addLine(labelFor(n) + ': ' + fieldVal(n), false, 9, true));
       await addSectionNotesToPdf(ctx, 'boiler', 'Boiler', data);
     }
 
@@ -1080,9 +1093,9 @@
         'Any reflective or heat absorbing films installed?',
         'Outdoor shading devices installed?'
       ];
-      envChecks.forEach((n, i) => addLine(envLabels[i] + ': ' + (fieldVal(n) || '') + (fieldVal(n + '_note') ? ' (Note: ' + fieldVal(n + '_note') + ')' : '')));
+      envChecks.forEach((n, i) => addLine(envLabels[i] + ': ' + (fieldVal(n) || '') + (fieldVal(n + '_note') ? ' (Note: ' + fieldVal(n + '_note') + ')' : ''), false, 9, true));
       addSubTitle('Detailed Information');
-      ['env_wall_detail', 'env_insulation_detail', 'env_wall_thick_detail', 'env_wall_temp', 'env_roof_area', 'env_roof_materials', 'env_roof_temp', 'env_roof_thick', 'env_insulation_age'].forEach((n) => addLine(labelFor(n) + ': ' + fieldVal(n)));
+      ['env_wall_detail', 'env_insulation_detail', 'env_wall_thick_detail', 'env_wall_temp', 'env_roof_area', 'env_roof_materials', 'env_roof_temp', 'env_roof_thick', 'env_insulation_age'].forEach((n) => addLine(labelFor(n) + ': ' + fieldVal(n), false, 9, true));
       await addSectionNotesToPdf(ctx, 'envelope', 'Building Envelope', data);
     }
 
@@ -1109,7 +1122,7 @@
         'Any records of maintenance for motors and motor driven equipment available?',
         'Are forklifts battery powered?'
       ];
-      pwrChecks.forEach((n, i) => addLine(pwrLabels[i] + ': ' + (fieldVal(n) || '') + (fieldVal(n + '_note') ? ' (Note: ' + fieldVal(n + '_note') + ')' : '')));
+      pwrChecks.forEach((n, i) => addLine(pwrLabels[i] + ': ' + (fieldVal(n) || '') + (fieldVal(n + '_note') ? ' (Note: ' + fieldVal(n + '_note') + ')' : ''), false, 9, true));
       addSubTitle('Miscellaneous');
       const pwrMiscHeaders = ['Category', 'Location', 'Brand / Model', 'Estimated age (years)', 'Capacity / Size (HP)', 'Number of units'];
       const pwrMiscCols = ['pwr_cat', 'pwr_loc', 'pwr_brand', 'pwr_age', 'pwr_cap', 'pwr_units'];
@@ -1128,15 +1141,15 @@
       const chillerCells = ['chiller_units', 'chiller_brand', 'chiller_age', 'chiller_cap', 'chiller_temp_in', 'chiller_temp_out', 'chiller_wet_bulb'];
       drawTable(chillerHeaders, [chillerCells.map((c) => fieldVal(c))], (row, ci) => (row[ci] != null ? row[ci] : ''));
       addSubTitle('Detailed Information');
-      addLine(labelFor('chiller_op_time') + ': ' + fieldVal('chiller_op_time'));
-      addLine(labelFor('chiller_efficiency') + ': ' + fieldVal('chiller_efficiency'));
+      addLine(labelFor('chiller_op_time') + ': ' + fieldVal('chiller_op_time'), false, 9, true);
+      addLine(labelFor('chiller_efficiency') + ': ' + fieldVal('chiller_efficiency'), false, 9, true);
       await addSectionNotesToPdf(ctx, 'chillers', 'Chillers', data);
     }
 
     if (hasSectionContent('generator', data)) {
       sectionNum++;
       addSectionTitle(sectionNum + '. Generator');
-      addLine('Does the site have any backup Generator? (Y/N): ' + fieldVal('gen_has_backup'));
+      addLine('Does the site have any backup Generator? (Y/N): ' + fieldVal('gen_has_backup'), false, 9, true);
       addSubTitle('Generator');
       const genHeaders = ['Parameters', 'Gen-1', 'Gen-2', 'Gen-3', 'Gen-4'];
       const genRows = [

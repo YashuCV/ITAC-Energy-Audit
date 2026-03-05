@@ -273,6 +273,8 @@ body {
 
 .notes-continuous-container {
   margin-top: 16px;
+  -webkit-user-select: none;
+  user-select: none;
 }
 
 .notes-continuous-container label {
@@ -316,6 +318,7 @@ body {
   width: 100%;
   height: auto;
   background: #fff;
+  touch-action: none;
 }
 
 .notes-combo-box.continuous-scroll .notes-combo-textarea {

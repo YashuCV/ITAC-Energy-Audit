@@ -199,7 +199,8 @@
   }
 
   function getFormData() {
-    updateCanvasHiddenInputs();
+    // For autosave we only persist typed values; handwritten canvases
+    // are captured separately when downloading the PDF.
     const data = { fields: {}, lightingRows: 1, powerMiscRows: 1, lighting: [], powerMisc: [] };
 
     const inputs = form.querySelectorAll('input, select, textarea');
@@ -530,8 +531,6 @@
       if (e.pointerType !== 'pen') return;
       e.preventDefault();
       drawing = true;
-      // Any new stroke should postpone autosave so it doesn't run while writing.
-      scheduleSave();
       var p = getPos(e);
       lastX = p.x;
       lastY = p.y;

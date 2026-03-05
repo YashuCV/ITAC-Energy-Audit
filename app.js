@@ -918,8 +918,9 @@
     const fields = data.fields || {};
     const has = (name) => (fields[name] || '').toString().trim() !== '';
     if (has('notes_continuous_' + sectionId)) return true;
-    const hand = (fields['notes_continuous_' + sectionId + '_handwritten'] || '').toString();
-    if (hand.length > 100) return true;
+    // Ink canvas data is stored in data.canvases, not fields
+    const inkData = (data.canvases && data.canvases['notes_continuous_' + sectionId]) || '';
+    if (inkData.length > 100) return true;
     const sectionPrefixes = {
       general: ['site_visit_date', 'facility_name', 'facility_location', 'facility_area', 'contact1_', 'contact2_', 'num_employees', 'production_schedule', 'office_schedule', 'major_products', 'annual_sales', 'raw_materials', 'final_wastes', 'labor_rates'],
       utility: ['electricity_', 'gas_supplier', 'gas_cost', 'water_supplier', 'water_cost', 'fuel_oil', 'solar_pv', 'renewable_'],
@@ -954,11 +955,11 @@
 
   async function addSectionNotesToPdf(ctx, sectionId, sectionLabel, data) {
     const { addSubTitle, addTallImageFromUrl } = ctx;
-    const fields = data.fields || {};
-    const hand = (fields['notes_continuous_' + sectionId + '_handwritten'] || '').toString();
-    if (hand.length > 100) {
-      addSubTitle('Continuous notes (handwritten)');
-      await addTallImageFromUrl(hand);
+    // Canvas ink is stored in data.canvases keyed by textarea name
+    const inkData = (data.canvases && data.canvases['notes_continuous_' + sectionId]) || '';
+    if (inkData.length > 100) {
+      addSubTitle('Handwritten Notes');
+      await addTallImageFromUrl(inkData);
     }
   }
 

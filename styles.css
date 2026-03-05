@@ -273,8 +273,6 @@ body {
 
 .notes-continuous-container {
   margin-top: 16px;
-  -webkit-user-select: none;
-  user-select: none;
 }
 
 .notes-continuous-container label {
@@ -301,33 +299,37 @@ body {
   box-sizing: border-box;
 }
 
-/* Scrollable drawing area for continuous notes */
-.handwritten-canvas-scroll {
-  max-height: 55vh;
-  min-height: 280px;
-  overflow-y: auto;
-  overflow-x: hidden;
-  /* finger scrolls the wrapper; pen events on the canvas below are unaffected */
-  touch-action: pan-y;
-  -webkit-overflow-scrolling: touch;
-  background: #fafbfc;
-  border-radius: var(--radius);
-}
-
-.handwritten-canvas-scroll .handwritten-canvas {
-  position: static;
+/* Scribble notes area — Apple Pencil writes directly here via iPadOS Scribble */
+.scribble-notes {
   display: block;
   width: 100%;
-  height: auto;
-  background: #fff;
-  /* MUST be none: any other value tells the browser to run scroll-detection on
-     every new pen-down, which swallows the first event of each lifted stroke.
-     Cursive hides this (pen never lifts); print writing hits it on every letter. */
-  touch-action: none;
+  min-height: 320px;
+  padding: 14px 16px;
+  font-size: 16px;
+  line-height: 1.7;
+  border: 2px solid var(--border);
+  border-radius: var(--radius);
+  background: #fefefe;
+  -webkit-appearance: none;
+  appearance: none;
+  font-family: inherit;
+  resize: vertical;
+  box-sizing: border-box;
+  /* ruled-paper feel for handwriting guidance */
+  background-image: repeating-linear-gradient(
+    to bottom,
+    transparent,
+    transparent calc(1.7em - 1px),
+    #e8edf3 calc(1.7em - 1px),
+    #e8edf3 1.7em
+  );
+  background-attachment: local;
 }
 
-.notes-combo-box.continuous-scroll .notes-combo-textarea {
-  display: none;
+.scribble-notes:focus {
+  outline: 2px solid var(--accent);
+  border-color: var(--accent);
+  background-color: #fff;
 }
 
 .notes-pages-container {
@@ -388,124 +390,7 @@ body {
   background: #cbd5e0;
 }
 
-/* Combined type + draw area – like iPad: keyboard = typed, pencil = ink in PDF */
-.handwritten-area {
-  margin-top: 12px;
-  margin-bottom: 16px;
-}
 
-.handwritten-area .handwritten-label {
-  display: block;
-  font-weight: 600;
-  margin-bottom: 6px;
-  color: var(--primary);
-  font-size: 0.95rem;
-}
-
-/* One box: textarea and canvas stacked; mode toggle */
-.notes-combo-box {
-  position: relative;
-  border: 1px solid var(--border);
-  border-radius: var(--radius);
-  background: #fff;
-  overflow: visible;
-}
-
-.notes-page .notes-combo-box {
-  min-height: 260px;
-}
-
-.notes-combo-box .notes-combo-textarea {
-  display: block;
-  width: 100%;
-  min-height: 220px;
-  padding: 12px 14px;
-  font-size: 16px;
-  line-height: 1.5;
-  border: none;
-  border-radius: var(--radius);
-  background: #fff;
-  resize: vertical;
-  font-family: inherit;
-  position: relative;
-  z-index: 1;
-  pointer-events: none;
-  user-select: none;
-  color: transparent;
-  caret-color: transparent;
-}
-
-.notes-page .notes-combo-box .notes-combo-textarea {
-  min-height: 260px;
-}
-
-.notes-combo-box .handwritten-canvas {
-  position: absolute;
-  left: 0;
-  top: 0;
-  width: 100%;
-  height: 220px;
-  pointer-events: none;
-  background: transparent;
-  touch-action: none;
-  z-index: 2;
-}
-
-.notes-page .notes-combo-box .handwritten-canvas {
-  height: 260px;
-}
-
-.notes-combo-box.draw-mode .handwritten-canvas,
-.notes-combo-box .handwritten-canvas {
-  pointer-events: auto;
-  cursor: crosshair;
-}
-
-.notes-combo-actions {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: center;
-  gap: 10px;
-  margin-top: 12px;
-  padding: 12px 14px;
-  position: relative;
-  z-index: 10;
-  background: #f8f9fa;
-  border-top: 2px solid var(--border);
-  border-radius: 0 0 var(--radius) var(--radius);
-}
-
-.notes-mode-btn {
-  padding: 10px 16px;
-  font-size: 0.95rem;
-  font-weight: 600;
-  border: 2px solid var(--border);
-  border-radius: var(--radius);
-  background: #fff;
-  color: var(--text);
-  cursor: pointer;
-  -webkit-appearance: none;
-  appearance: none;
-  transition: all 0.2s;
-  min-width: 120px;
-}
-
-.notes-mode-btn.active {
-  background: var(--primary);
-  color: #fff;
-  border-color: var(--primary);
-}
-
-.btn-clear-canvas {
-  background: #fff5f5;
-  color: #c53030;
-  border: 1px solid #feb2b2;
-  font-size: 0.9rem;
-}
-
-.btn-clear-canvas:hover, .btn-clear-canvas:focus {
-  background: #fed7d7;
-}
 
 .form-section {
   background: var(--surface);

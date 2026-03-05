@@ -23,7 +23,6 @@
   const DEBOUNCE_MS = 600;
   const IDB_NAME = 'EnergyAuditDB';
   const IDB_STORE = 'formData';
-  const IDB_CANVAS_STORE = 'canvasImages';
 
   let saveTimeout = null;
   let useIndexedDB = false;
@@ -44,62 +43,7 @@
   }
 
   function resizeCanvasesInSection(sectionId) {
-    var panel = form.querySelector('.form-section[data-section="' + sectionId + '"]');
-    if (!panel || !panel.classList.contains('active')) return;
-    panel.querySelectorAll('.handwritten-canvas').forEach(function (canvas) {
-      var box = canvas.closest('.notes-combo-box');
-      if (!box) return;
-      var scrollWrap = canvas.parentNode && canvas.parentNode.classList && canvas.parentNode.classList.contains('handwritten-canvas-scroll') ? canvas.parentNode : null;
-      if (box.classList.contains('continuous-scroll') && scrollWrap && scrollWrap.clientWidth > 0 && canvas.width !== scrollWrap.clientWidth) {
-        var cw = scrollWrap.clientWidth;
-        var ctx = canvas.getContext('2d');
-        if (ctx) {
-          var hadContent = canvas.width > 0 && canvas.height > 0 && canvasHasContent(canvas);
-          var imgData = null;
-          try {
-            imgData = hadContent ? ctx.getImageData(0, 0, canvas.width, canvas.height) : null;
-          } catch (e) {}
-          canvas.width = cw;
-          canvas.height = 2400;
-          canvas.style.width = cw + 'px';
-          canvas.style.height = '2400px';
-          if (imgData && imgData.data && imgData.data.length > 0) {
-            try {
-              var tempCanvas = document.createElement('canvas');
-              tempCanvas.width = imgData.width;
-              tempCanvas.height = imgData.height;
-              tempCanvas.getContext('2d').putImageData(imgData, 0, 0);
-              ctx.drawImage(tempCanvas, 0, 0, canvas.width, canvas.height);
-            } catch (e) {}
-          }
-        }
-        return;
-      }
-      var textarea = box.querySelector('.notes-combo-textarea');
-      if (!textarea) return;
-      var r = textarea.getBoundingClientRect();
-      if (r.width > 0 && r.height > 0 && (canvas.width === 600 || canvas.width === 0)) {
-        var ctx = canvas.getContext('2d');
-        if (ctx) {
-          var hadContent = canvas.width > 0 && canvas.height > 0 && canvasHasContent(canvas);
-          var imgData = hadContent ? ctx.getImageData(0, 0, Math.min(canvas.width, 600), Math.min(canvas.height, 220)) : null;
-          canvas.width = Math.floor(r.width);
-          canvas.height = Math.floor(r.height);
-          canvas.style.width = r.width + 'px';
-          canvas.style.height = r.height + 'px';
-          if (imgData && imgData.data && imgData.data.length > 0) {
-            try {
-              var tempCanvas = document.createElement('canvas');
-              tempCanvas.width = imgData.width;
-              tempCanvas.height = imgData.height;
-              tempCanvas.getContext('2d').putImageData(imgData, 0, 0);
-              ctx.drawImage(tempCanvas, 0, 0, canvas.width, canvas.height);
-            } catch (e) {
-            }
-          }
-        }
-      }
-    });
+    // No canvases — notes areas use native Scribble textareas
   }
 
   function switchTab(tabId) {
@@ -130,16 +74,13 @@
         reject(new Error('IndexedDB not supported'));
         return;
       }
-      const req = indexedDB.open(IDB_NAME, 2);
+      const req = indexedDB.open(IDB_NAME, 1);
       req.onerror = () => reject(req.error);
       req.onsuccess = () => resolve(req.result);
       req.onupgradeneeded = (e) => {
         const db = e.target.result;
         if (!db.objectStoreNames.contains(IDB_STORE)) {
           db.createObjectStore(IDB_STORE, { keyPath: 'id' });
-        }
-        if (!db.objectStoreNames.contains(IDB_CANVAS_STORE)) {
-          db.createObjectStore(IDB_CANVAS_STORE, { keyPath: 'id' });
         }
       };
     });
@@ -156,25 +97,6 @@
     return tempCanvas.toDataURL('image/png', 1.0);
   }
 
-  function updateCanvasHiddenInputs() {
-    form.querySelectorAll('.handwritten-canvas').forEach(function (canvas) {
-      var field = canvas.getAttribute('data-field');
-      if (!field) return;
-      var hidden = form.querySelector('input[name="' + field + '_handwritten"]');
-      if (hidden) {
-        try {
-          if (canvasHasContent(canvas)) {
-            var dataUrl = canvasToImageWithBackground(canvas);
-            if (dataUrl && dataUrl !== 'data:,') {
-              hidden.value = dataUrl;
-            }
-          }
-        } catch (e) {
-          console.warn('Failed to save canvas data for', field, e);
-        }
-      }
-    });
-  }
 
   function canvasHasContent(canvas) {
     if (!canvas || !canvas.getContext) return false;
@@ -296,21 +218,7 @@
         }
       });
     }
-    Object.keys(data.fields || {}).forEach(function (name) {
-      if (name.indexOf('_handwritten') === -1) return;
-      var val = (data.fields[name] || '').toString().trim();
-      if (!val) return;
-      var field = name.replace(/_handwritten$/, '');
-      var canvas = form.querySelector('.handwritten-canvas[data-field="' + field + '"]');
-      if (!canvas) return;
-      var ctx = canvas.getContext('2d');
-      var img = new Image();
-      img.onload = function () {
-        ctx.clearRect(0, 0, canvas.width, canvas.height);
-        ctx.drawImage(img, 0, 0);
-      };
-      img.src = val;
-    });
+
   }
 
   function showStatus(text, isSaving) {
@@ -391,13 +299,10 @@
           const local = localStorage.getItem(STORAGE_KEY);
           if (local) apply(local);
         }
-        // Restore ink after a short delay so canvases are sized first
-        setTimeout(loadAllCanvases, 200);
       })
       .catch(() => {
         const local = localStorage.getItem(STORAGE_KEY);
         if (local) apply(local);
-        setTimeout(loadAllCanvases, 200);
       });
   }
 
@@ -448,270 +353,36 @@
     scheduleSave();
   }
 
-  function injectHandwrittenBlock(textareaEl) {
-    if (!textareaEl || textareaEl.name.indexOf('notes_continuous_') !== 0) return;
-    if (textareaEl.closest && textareaEl.closest('.notes-combo-box')) return;
-    var field = textareaEl.name;
-    var wrapper = document.createElement('div');
-    wrapper.className = 'notes-combo-box draw-mode continuous-scroll';
-    textareaEl.classList.add('notes-combo-textarea');
-    textareaEl.placeholder = 'Use Apple Pencil only to draw (finger and hand rest are ignored).';
-    textareaEl.readOnly = true;
-    textareaEl.disabled = true;
-    var parent = textareaEl.parentNode;
-    parent.insertBefore(wrapper, textareaEl);
-    wrapper.appendChild(textareaEl);
-    var scrollWrap = document.createElement('div');
-    scrollWrap.className = 'handwritten-canvas-scroll';
-    var canvas = document.createElement('canvas');
-    canvas.className = 'handwritten-canvas';
-    canvas.setAttribute('data-field', field);
-    canvas.setAttribute('width', '600');
-    canvas.setAttribute('height', '220');
-    scrollWrap.appendChild(canvas);
-    wrapper.appendChild(scrollWrap);
-    var hidden = document.createElement('input');
-    hidden.type = 'hidden';
-    hidden.name = field + '_handwritten';
-    wrapper.appendChild(hidden);
-    var actions = document.createElement('div');
-    actions.className = 'notes-combo-actions';
-    actions.innerHTML = '<button type="button" class="btn btn-clear-canvas" data-canvas-field="' + field + '">Clear handwriting</button>';
-    wrapper.appendChild(actions);
-    actions.querySelector('.btn-clear-canvas').addEventListener('click', function () {
-      var ctx = canvas.getContext('2d');
-      if (ctx) {
-        ctx.clearRect(0, 0, canvas.width, canvas.height);
-      }
-      hidden.value = '';
-      scheduleSave();
-    });
-    if (canvas.getContext) initHandwrittenCanvas(canvas);
-  }
-
-  // ── Canvas persistence ────────────────────────────────────────────────────
-  var _canvasSaveTimers = {};
-
-  function scheduleCanvasSave(canvas) {
-    var field = canvas.getAttribute('data-field');
-    if (!field) return;
-    if (_canvasSaveTimers[field]) clearTimeout(_canvasSaveTimers[field]);
-    _canvasSaveTimers[field] = setTimeout(function () {
-      delete _canvasSaveTimers[field];
-      if (!canvasHasContent(canvas)) return;
-      // Prefer storing as a Blob in IDB (much cheaper than base64 in JSON)
-      if (canvas.toBlob) {
-        canvas.toBlob(function (blob) {
-          if (!blob) return;
-          idb().then(function (db) {
-            var tx = db.transaction(IDB_CANVAS_STORE, 'readwrite');
-            tx.objectStore(IDB_CANVAS_STORE).put({ id: 'canvas:' + field, blob: blob });
-          }).catch(function () {
-            // IndexedDB unavailable – fall back to compressed data URL in localStorage
-            try {
-              var du = canvas.toDataURL('image/png', 0.85);
-              localStorage.setItem('canvas:' + field, du);
-            } catch (e) {}
-          });
-        }, 'image/png', 0.85);
-      } else {
-        try {
-          var du = canvas.toDataURL('image/png', 0.85);
-          idb().then(function (db) {
-            var tx = db.transaction(IDB_CANVAS_STORE, 'readwrite');
-            tx.objectStore(IDB_CANVAS_STORE).put({ id: 'canvas:' + field, dataUrl: du });
-          }).catch(function () {
-            try { localStorage.setItem('canvas:' + field, du); } catch (e) {}
-          });
-        } catch (e) {}
-      }
-    }, 900);
-  }
-
-  function restoreCanvasField(field, src) {
-    var canvas = form.querySelector('.handwritten-canvas[data-field="' + field + '"]');
-    if (!canvas) return;
-    var img = new Image();
-    img.onload = function () {
-      var ctx = canvas.getContext('2d');
-      if (!ctx) return;
-      ctx.clearRect(0, 0, canvas.width, canvas.height);
-      ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
-      if (src.startsWith('blob:')) URL.revokeObjectURL(src);
-    };
-    img.src = src;
-  }
-
-  function loadAllCanvases() {
-    idb().then(function (db) {
-      var tx = db.transaction(IDB_CANVAS_STORE, 'readonly');
-      var req = tx.objectStore(IDB_CANVAS_STORE).getAll();
-      req.onsuccess = function () {
-        (req.result || []).forEach(function (record) {
-          if (!record || !record.id || record.id.indexOf('canvas:') !== 0) return;
-          var field = record.id.slice('canvas:'.length);
-          if (record.blob) {
-            restoreCanvasField(field, URL.createObjectURL(record.blob));
-          } else if (record.dataUrl) {
-            restoreCanvasField(field, record.dataUrl);
-          }
-        });
-      };
-    }).catch(function () {
-      // Fallback: scan localStorage for canvas: keys
-      try {
-        Object.keys(localStorage).forEach(function (key) {
-          if (key.indexOf('canvas:') !== 0) return;
-          var field = key.slice('canvas:'.length);
-          var val = localStorage.getItem(key);
-          if (val) restoreCanvasField(field, val);
-        });
-      } catch (e) {}
-    });
-  }
-
-  function clearAllSavedCanvases() {
-    idb().then(function (db) {
-      var tx = db.transaction(IDB_CANVAS_STORE, 'readwrite');
-      tx.objectStore(IDB_CANVAS_STORE).clear();
-    }).catch(function () {});
-    try {
-      Object.keys(localStorage).forEach(function (key) {
-        if (key.indexOf('canvas:') === 0) localStorage.removeItem(key);
-      });
-    } catch (e) {}
-  }
-
-  // ── Apple Pencil canvas drawing ───────────────────────────────────────────
-  function initHandwrittenCanvas(canvas) {
-    var ctx = canvas.getContext('2d');
-    if (!ctx) return;
-
-    var scrollWrap = (canvas.parentNode && canvas.parentNode.classList &&
-      canvas.parentNode.classList.contains('handwritten-canvas-scroll'))
-      ? canvas.parentNode : null;
-    var box = canvas.closest('.notes-combo-box');
-    var textarea = box ? box.querySelector('.notes-combo-textarea') : null;
-
-    if (scrollWrap && scrollWrap.clientWidth > 0) {
-      var cw = scrollWrap.clientWidth;
-      canvas.width = cw;
-      canvas.height = 2400;
-      canvas.style.width = cw + 'px';
-      canvas.style.height = '2400px';
-    } else if (box && textarea) {
-      var r = textarea.getBoundingClientRect();
-      if (r.width > 0 && r.height > 0) {
-        canvas.width = Math.floor(r.width);
-        canvas.height = Math.floor(r.height);
-        canvas.style.width = r.width + 'px';
-        canvas.style.height = r.height + 'px';
-      } else {
-        canvas.width = 600;
-        canvas.height = 220;
-      }
-    } else {
-      canvas.width = 600;
-      canvas.height = 220;
-    }
-
-    // Ink style – mimics Apple Pencil ink
-    ctx.strokeStyle = '#1c1c1e';
-    ctx.fillStyle  = '#1c1c1e';
-    ctx.lineWidth  = 1.5;
-    ctx.lineCap    = 'round';
-    ctx.lineJoin   = 'round';
-    ctx.globalCompositeOperation = 'source-over';
-
-    var isDrawing = false;
-    var lastX = 0;
-    var lastY = 0;
-
-    function getPos(e) {
-      var rect = canvas.getBoundingClientRect();
-      var scaleX = canvas.width  / rect.width;
-      var scaleY = canvas.height / rect.height;
-      return {
-        x: (e.clientX - rect.left) * scaleX,
-        y: (e.clientY - rect.top)  * scaleY,
-        // Apple Pencil reports real pressure 0–1; fall back to 0.5 for mouse
-        pressure: (e.pressure > 0) ? e.pressure : 0.5
-      };
-    }
-
-    function drawSegment(x, y, pressure) {
-      // Variable line-width driven by pencil pressure (0.6 px – 3 px)
-      ctx.lineWidth = Math.max(0.6, 3.0 * pressure);
-      ctx.beginPath();
-      ctx.moveTo(lastX, lastY);
-      ctx.lineTo(x, y);
-      ctx.stroke();
-      lastX = x;
-      lastY = y;
-    }
-
-    function onDown(e) {
-      if (e.pointerType !== 'pen') return;
-      e.preventDefault();
-      e.stopPropagation();
-      isDrawing = true;
-      // setPointerCapture keeps all subsequent pointer events routed to this
-      // canvas even when the stylus moves outside its bounding box – this is
-      // the #1 fix for strokes that "break" mid-letter.
-      try { canvas.setPointerCapture(e.pointerId); } catch (_) {}
-      var p = getPos(e);
-      lastX = p.x;
-      lastY = p.y;
-      // Paint a pressure-sized dot so a tap registers
-      ctx.beginPath();
-      ctx.arc(lastX, lastY, Math.max(0.4, 1.5 * p.pressure), 0, Math.PI * 2);
-      ctx.fill();
-    }
-
-    function onMove(e) {
-      if (e.pointerType !== 'pen') return;
-      if (!isDrawing) return;
-      e.preventDefault();
-      e.stopPropagation();
-      // getCoalescedEvents() provides all the high-frequency micro-points that
-      // the Pencil recorded between animation frames – essential for smooth curves.
-      var events = (e.getCoalescedEvents) ? e.getCoalescedEvents() : [e];
-      for (var i = 0; i < events.length; i++) {
-        var p = getPos(events[i]);
-        drawSegment(p.x, p.y, p.pressure);
-      }
-    }
-
-    function onEnd(e) {
-      if (e.pointerType !== 'pen') return;
-      if (!isDrawing) return;
-      e.preventDefault();
-      isDrawing = false;
-      try { canvas.releasePointerCapture(e.pointerId); } catch (_) {}
-      // Canvas ink is persisted independently — no need to trigger the text-field
-      // save here, which would flash "Saving…" in the status bar after every lift.
-      scheduleCanvasSave(canvas);
-    }
-
-    function onCancel(e) {
-      // pointercancel fires during palm rejection or system gestures –
-      // just reset state cleanly without corrupting the drawn content.
-      if (!isDrawing) return;
-      isDrawing = false;
-      try { canvas.releasePointerCapture(e.pointerId); } catch (_) {}
-      scheduleCanvasSave(canvas);
-    }
-
-    canvas.addEventListener('pointerdown',   onDown,   { passive: false });
-    canvas.addEventListener('pointermove',   onMove,   { passive: false });
-    canvas.addEventListener('pointerup',     onEnd,    { passive: false });
-    canvas.addEventListener('pointerleave',  onEnd,    { passive: false });
-    canvas.addEventListener('pointercancel', onCancel, { passive: false });
-  }
-
+  // ── Scribble-native notes (iPadOS 14+) ────────────────────────────────────
+  // Apple Pencil + Scribble writes directly into any editable <textarea>.
+  // The OS handles handwriting recognition with zero latency and no stroke
+  // breaks — pen lifts between characters are handled natively by the system.
+  //
+  // Rules for Scribble to activate:
+  //   1. Element must NOT be disabled or readonly
+  //   2. Standard <textarea> or <input> — no canvas overlay intercepting events
+  //   3. No touch-action restrictions on the element itself
   function addHandwrittenCanvases() {
     form.querySelectorAll('textarea[name^="notes_continuous_"]').forEach(function (ta) {
-      injectHandwrittenBlock(ta);
+      // Scribble silently refuses on disabled / readonly elements
+      ta.readOnly = false;
+      ta.disabled = false;
+      ta.removeAttribute('readonly');
+      ta.removeAttribute('disabled');
+
+      // Tell iPadOS this is a freeform text / notes field
+      ta.setAttribute('inputmode', 'text');
+      ta.setAttribute('autocorrect', 'off');
+      ta.setAttribute('autocomplete', 'off');
+      ta.setAttribute('spellcheck', 'false');
+      ta.placeholder = 'Write with Apple Pencil (Scribble) or type — all notes auto-save.';
+      ta.classList.add('scribble-notes');
+      ta.style.minHeight = '320px';
+      ta.style.resize = 'vertical';
+
+      // Wire into autosave — duplicate listeners are harmless
+      ta.addEventListener('input',  scheduleSave);
+      ta.addEventListener('change', scheduleSave);
     });
   }
 
@@ -747,17 +418,6 @@
     });
     while (lightingBody.rows.length > 1) lightingBody.deleteRow(1);
     while (powerMiscBody.rows.length > 1) powerMiscBody.deleteRow(1);
-    form.querySelectorAll('.handwritten-canvas').forEach(function (canvas) {
-      var ctx = canvas.getContext('2d');
-      if (ctx) {
-        ctx.clearRect(0, 0, canvas.width, canvas.height);
-      }
-      var field = canvas.getAttribute('data-field');
-      if (field) {
-        var h = form.querySelector('input[name="' + field + '_handwritten"]');
-        if (h) h.value = '';
-      }
-    });
     if (useIndexedDB) {
       idb().then((db) => {
         return new Promise((resolve, reject) => {
@@ -769,7 +429,7 @@
       }).catch(() => {});
     }
     try { localStorage.removeItem(STORAGE_KEY); } catch (e) {}
-    clearAllSavedCanvases();    showStatus('Form reset', false);
+    showStatus('Form reset', false);
     setTimeout(() => showStatus('Saved', false), 2000);
   }
 
@@ -1393,9 +1053,6 @@
   async function downloadPdf() {
     try {
       saveStatus.textContent = 'Preparing PDF…';
-      // Capture latest handwritten notes into hidden fields (can be a bit heavy, but this
-      // only runs when explicitly downloading the PDF, not on every pen lift).
-      updateCanvasHiddenInputs();
       const doc = await buildPdfFull();
       const facility = (getFormData().fields.facility_name || 'Form').replace(/\s+/g, '-');
       const name = 'ITAC-Energy-Audit-' + facility + '-' + new Date().toISOString().slice(0, 10) + '.pdf';
@@ -1452,27 +1109,6 @@
       });
     });
   }
-
-  const originalSetFormData = setFormData;
-  setFormData = function (data) {
-    originalSetFormData(data);
-    if (!data || !data.fields) return;
-    Object.keys(data.fields || {}).forEach(function (name) {
-      if (name.indexOf('_handwritten') === -1) return;
-      var val = (data.fields[name] || '').toString().trim();
-      if (!val) return;
-      var field = name.replace(/_handwritten$/, '');
-      var canvas = form.querySelector('.handwritten-canvas[data-field="' + field + '"]');
-      if (!canvas) return;
-      var ctx = canvas.getContext('2d');
-      var img = new Image();
-      img.onload = function () {
-        ctx.clearRect(0, 0, canvas.width, canvas.height);
-        ctx.drawImage(img, 0, 0);
-      };
-      img.src = val;
-    });
-  };
 
   addHandwrittenCanvases();
   initTabs();

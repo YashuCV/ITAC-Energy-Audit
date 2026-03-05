@@ -307,6 +307,8 @@ body {
   min-height: 280px;
   overflow-y: auto;
   overflow-x: hidden;
+  /* finger scrolls the wrapper; pen events on the canvas below are unaffected */
+  touch-action: pan-y;
   -webkit-overflow-scrolling: touch;
   background: #fafbfc;
   border-radius: var(--radius);
@@ -318,9 +320,10 @@ body {
   width: 100%;
   height: auto;
   background: #fff;
-  /* pan-y lets a finger scroll the container; Apple Pencil (pointerType=pen)
-     is handled exclusively in JS so we never block it regardless of this value */
-  touch-action: pan-y;
+  /* MUST be none: any other value tells the browser to run scroll-detection on
+     every new pen-down, which swallows the first event of each lifted stroke.
+     Cursive hides this (pen never lifts); print writing hits it on every letter. */
+  touch-action: none;
 }
 
 .notes-combo-box.continuous-scroll .notes-combo-textarea {

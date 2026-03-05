@@ -688,9 +688,9 @@
       e.preventDefault();
       isDrawing = false;
       try { canvas.releasePointerCapture(e.pointerId); } catch (_) {}
-      // Save the canvas ink to IndexedDB / localStorage so it survives reload
+      // Canvas ink is persisted independently — no need to trigger the text-field
+      // save here, which would flash "Saving…" in the status bar after every lift.
       scheduleCanvasSave(canvas);
-      scheduleSave();
     }
 
     function onCancel(e) {

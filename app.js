@@ -23,6 +23,7 @@
   const DEBOUNCE_MS = 600;
   const IDB_NAME = 'EnergyAuditDB';
   const IDB_STORE = 'formData';
+  const IDB_CANVAS_STORE = 'canvasImages';
 
   let saveTimeout = null;
   let useIndexedDB = false;
@@ -129,13 +130,16 @@
         reject(new Error('IndexedDB not supported'));
         return;
       }
-      const req = indexedDB.open(IDB_NAME, 1);
+      const req = indexedDB.open(IDB_NAME, 2);
       req.onerror = () => reject(req.error);
       req.onsuccess = () => resolve(req.result);
       req.onupgradeneeded = (e) => {
         const db = e.target.result;
         if (!db.objectStoreNames.contains(IDB_STORE)) {
           db.createObjectStore(IDB_STORE, { keyPath: 'id' });
+        }
+        if (!db.objectStoreNames.contains(IDB_CANVAS_STORE)) {
+          db.createObjectStore(IDB_CANVAS_STORE, { keyPath: 'id' });
         }
       };
     });
@@ -387,10 +391,13 @@
           const local = localStorage.getItem(STORAGE_KEY);
           if (local) apply(local);
         }
+        // Restore ink after a short delay so canvases are sized first
+        setTimeout(loadAllCanvases, 200);
       })
       .catch(() => {
         const local = localStorage.getItem(STORAGE_KEY);
         if (local) apply(local);
+        setTimeout(loadAllCanvases, 200);
       });
   }
 
@@ -482,19 +489,116 @@
     if (canvas.getContext) initHandwrittenCanvas(canvas);
   }
 
+  // ── Canvas persistence ────────────────────────────────────────────────────
+  var _canvasSaveTimers = {};
+
+  function scheduleCanvasSave(canvas) {
+    var field = canvas.getAttribute('data-field');
+    if (!field) return;
+    if (_canvasSaveTimers[field]) clearTimeout(_canvasSaveTimers[field]);
+    _canvasSaveTimers[field] = setTimeout(function () {
+      delete _canvasSaveTimers[field];
+      if (!canvasHasContent(canvas)) return;
+      // Prefer storing as a Blob in IDB (much cheaper than base64 in JSON)
+      if (canvas.toBlob) {
+        canvas.toBlob(function (blob) {
+          if (!blob) return;
+          idb().then(function (db) {
+            var tx = db.transaction(IDB_CANVAS_STORE, 'readwrite');
+            tx.objectStore(IDB_CANVAS_STORE).put({ id: 'canvas:' + field, blob: blob });
+          }).catch(function () {
+            // IndexedDB unavailable – fall back to compressed data URL in localStorage
+            try {
+              var du = canvas.toDataURL('image/png', 0.85);
+              localStorage.setItem('canvas:' + field, du);
+            } catch (e) {}
+          });
+        }, 'image/png', 0.85);
+      } else {
+        try {
+          var du = canvas.toDataURL('image/png', 0.85);
+          idb().then(function (db) {
+            var tx = db.transaction(IDB_CANVAS_STORE, 'readwrite');
+            tx.objectStore(IDB_CANVAS_STORE).put({ id: 'canvas:' + field, dataUrl: du });
+          }).catch(function () {
+            try { localStorage.setItem('canvas:' + field, du); } catch (e) {}
+          });
+        } catch (e) {}
+      }
+    }, 900);
+  }
+
+  function restoreCanvasField(field, src) {
+    var canvas = form.querySelector('.handwritten-canvas[data-field="' + field + '"]');
+    if (!canvas) return;
+    var img = new Image();
+    img.onload = function () {
+      var ctx = canvas.getContext('2d');
+      if (!ctx) return;
+      ctx.clearRect(0, 0, canvas.width, canvas.height);
+      ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
+      if (src.startsWith('blob:')) URL.revokeObjectURL(src);
+    };
+    img.src = src;
+  }
+
+  function loadAllCanvases() {
+    idb().then(function (db) {
+      var tx = db.transaction(IDB_CANVAS_STORE, 'readonly');
+      var req = tx.objectStore(IDB_CANVAS_STORE).getAll();
+      req.onsuccess = function () {
+        (req.result || []).forEach(function (record) {
+          if (!record || !record.id || record.id.indexOf('canvas:') !== 0) return;
+          var field = record.id.slice('canvas:'.length);
+          if (record.blob) {
+            restoreCanvasField(field, URL.createObjectURL(record.blob));
+          } else if (record.dataUrl) {
+            restoreCanvasField(field, record.dataUrl);
+          }
+        });
+      };
+    }).catch(function () {
+      // Fallback: scan localStorage for canvas: keys
+      try {
+        Object.keys(localStorage).forEach(function (key) {
+          if (key.indexOf('canvas:') !== 0) return;
+          var field = key.slice('canvas:'.length);
+          var val = localStorage.getItem(key);
+          if (val) restoreCanvasField(field, val);
+        });
+      } catch (e) {}
+    });
+  }
+
+  function clearAllSavedCanvases() {
+    idb().then(function (db) {
+      var tx = db.transaction(IDB_CANVAS_STORE, 'readwrite');
+      tx.objectStore(IDB_CANVAS_STORE).clear();
+    }).catch(function () {});
+    try {
+      Object.keys(localStorage).forEach(function (key) {
+        if (key.indexOf('canvas:') === 0) localStorage.removeItem(key);
+      });
+    } catch (e) {}
+  }
+
+  // ── Apple Pencil canvas drawing ───────────────────────────────────────────
   function initHandwrittenCanvas(canvas) {
     var ctx = canvas.getContext('2d');
     if (!ctx) return;
-    var scrollWrap = canvas.parentNode && canvas.parentNode.classList && canvas.parentNode.classList.contains('handwritten-canvas-scroll') ? canvas.parentNode : null;
+
+    var scrollWrap = (canvas.parentNode && canvas.parentNode.classList &&
+      canvas.parentNode.classList.contains('handwritten-canvas-scroll'))
+      ? canvas.parentNode : null;
     var box = canvas.closest('.notes-combo-box');
     var textarea = box ? box.querySelector('.notes-combo-textarea') : null;
+
     if (scrollWrap && scrollWrap.clientWidth > 0) {
       var cw = scrollWrap.clientWidth;
-      var ch = 2400;
       canvas.width = cw;
-      canvas.height = ch;
+      canvas.height = 2400;
       canvas.style.width = cw + 'px';
-      canvas.style.height = ch + 'px';
+      canvas.style.height = '2400px';
     } else if (box && textarea) {
       var r = textarea.getBoundingClientRect();
       if (r.width > 0 && r.height > 0) {
@@ -510,57 +614,99 @@
       canvas.width = 600;
       canvas.height = 220;
     }
-    var w = canvas.width;
-    var h = canvas.height;
-    ctx.strokeStyle = '#000';
-    ctx.lineWidth = 2;
-    ctx.lineCap = 'round';
+
+    // Ink style – mimics Apple Pencil ink
+    ctx.strokeStyle = '#1c1c1e';
+    ctx.fillStyle  = '#1c1c1e';
+    ctx.lineWidth  = 1.5;
+    ctx.lineCap    = 'round';
+    ctx.lineJoin   = 'round';
     ctx.globalCompositeOperation = 'source-over';
-    var drawing = false;
+
+    var isDrawing = false;
     var lastX = 0;
     var lastY = 0;
 
     function getPos(e) {
       var rect = canvas.getBoundingClientRect();
-      var scaleX = canvas.width / rect.width;
+      var scaleX = canvas.width  / rect.width;
       var scaleY = canvas.height / rect.height;
-      return { x: (e.clientX - rect.left) * scaleX, y: (e.clientY - rect.top) * scaleY };
+      return {
+        x: (e.clientX - rect.left) * scaleX,
+        y: (e.clientY - rect.top)  * scaleY,
+        // Apple Pencil reports real pressure 0–1; fall back to 0.5 for mouse
+        pressure: (e.pressure > 0) ? e.pressure : 0.5
+      };
     }
 
-    function start(e) {
-      if (e.pointerType !== 'pen') return;
-      e.preventDefault();
-      drawing = true;
-      var p = getPos(e);
-      lastX = p.x;
-      lastY = p.y;
-    }
-    function move(e) {
-      if (e.pointerType !== 'pen') return;
-      e.preventDefault();
-      if (!drawing) return;
-      var p = getPos(e);
+    function drawSegment(x, y, pressure) {
+      // Variable line-width driven by pencil pressure (0.6 px – 3 px)
+      ctx.lineWidth = Math.max(0.6, 3.0 * pressure);
       ctx.beginPath();
       ctx.moveTo(lastX, lastY);
-      ctx.lineTo(p.x, p.y);
+      ctx.lineTo(x, y);
       ctx.stroke();
-      lastX = p.x;
-      lastY = p.y;
-    }
-    function end(e) {
-      if (e.pointerType !== 'pen') return;
-      e.preventDefault();
-      if (drawing) {
-        // Just schedule a debounced save; heavy image work happens later when idle.
-        scheduleSave();
-      }
-      drawing = false;
+      lastX = x;
+      lastY = y;
     }
 
-    canvas.addEventListener('pointerdown', start);
-    canvas.addEventListener('pointermove', move);
-    canvas.addEventListener('pointerup', end);
-    canvas.addEventListener('pointerleave', end);
+    function onDown(e) {
+      if (e.pointerType !== 'pen') return;
+      e.preventDefault();
+      e.stopPropagation();
+      isDrawing = true;
+      // setPointerCapture keeps all subsequent pointer events routed to this
+      // canvas even when the stylus moves outside its bounding box – this is
+      // the #1 fix for strokes that "break" mid-letter.
+      try { canvas.setPointerCapture(e.pointerId); } catch (_) {}
+      var p = getPos(e);
+      lastX = p.x;
+      lastY = p.y;
+      // Paint a pressure-sized dot so a tap registers
+      ctx.beginPath();
+      ctx.arc(lastX, lastY, Math.max(0.4, 1.5 * p.pressure), 0, Math.PI * 2);
+      ctx.fill();
+    }
+
+    function onMove(e) {
+      if (e.pointerType !== 'pen') return;
+      if (!isDrawing) return;
+      e.preventDefault();
+      e.stopPropagation();
+      // getCoalescedEvents() provides all the high-frequency micro-points that
+      // the Pencil recorded between animation frames – essential for smooth curves.
+      var events = (e.getCoalescedEvents) ? e.getCoalescedEvents() : [e];
+      for (var i = 0; i < events.length; i++) {
+        var p = getPos(events[i]);
+        drawSegment(p.x, p.y, p.pressure);
+      }
+    }
+
+    function onEnd(e) {
+      if (e.pointerType !== 'pen') return;
+      if (!isDrawing) return;
+      e.preventDefault();
+      isDrawing = false;
+      try { canvas.releasePointerCapture(e.pointerId); } catch (_) {}
+      // Save the canvas ink to IndexedDB / localStorage so it survives reload
+      scheduleCanvasSave(canvas);
+      scheduleSave();
+    }
+
+    function onCancel(e) {
+      // pointercancel fires during palm rejection or system gestures –
+      // just reset state cleanly without corrupting the drawn content.
+      if (!isDrawing) return;
+      isDrawing = false;
+      try { canvas.releasePointerCapture(e.pointerId); } catch (_) {}
+      scheduleCanvasSave(canvas);
+    }
+
+    canvas.addEventListener('pointerdown',   onDown,   { passive: false });
+    canvas.addEventListener('pointermove',   onMove,   { passive: false });
+    canvas.addEventListener('pointerup',     onEnd,    { passive: false });
+    canvas.addEventListener('pointerleave',  onEnd,    { passive: false });
+    canvas.addEventListener('pointercancel', onCancel, { passive: false });
   }
 
   function addHandwrittenCanvases() {
@@ -623,7 +769,7 @@
       }).catch(() => {});
     }
     try { localStorage.removeItem(STORAGE_KEY); } catch (e) {}
-    showStatus('Form reset', false);
+    clearAllSavedCanvases();    showStatus('Form reset', false);
     setTimeout(() => showStatus('Saved', false), 2000);
   }
 

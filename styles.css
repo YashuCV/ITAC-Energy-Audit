@@ -318,7 +318,9 @@ body {
   width: 100%;
   height: auto;
   background: #fff;
-  touch-action: none;
+  /* pan-y lets a finger scroll the container; Apple Pencil (pointerType=pen)
+     is handled exclusively in JS so we never block it regardless of this value */
+  touch-action: pan-y;
 }
 
 .notes-combo-box.continuous-scroll .notes-combo-textarea {

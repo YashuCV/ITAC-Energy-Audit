@@ -125,9 +125,7 @@
   }
 
   function getFormData() {
-    // For autosave we only persist typed values; handwritten canvases
-    // are captured separately when downloading the PDF.
-    const data = { fields: {}, lightingRows: 1, powerMiscRows: 1, lighting: [], powerMisc: [] };
+    const data = { fields: {}, lightingRows: 1, powerMiscRows: 1, lighting: [], powerMisc: [], canvases: {} };
 
     const inputs = form.querySelectorAll('input, select, textarea');
     inputs.forEach((el) => {
@@ -138,6 +136,18 @@
       } else {
         data.fields[name] = el.value;
       }
+    });
+
+    // Capture ink canvases into the save payload (as compact JPEG data URLs)
+    form.querySelectorAll('.ink-canvas[data-field]').forEach(function (canvas) {
+      try {
+        if (!canvasHasContent(canvas)) return;
+        // JPEG at 0.7 quality: ~10-30 KB per canvas vs ~200 KB for PNG
+        var dataUrl = canvas.toDataURL('image/jpeg', 0.7);
+        if (dataUrl && dataUrl.length > 100) {
+          data.canvases[canvas.getAttribute('data-field')] = dataUrl;
+        }
+      } catch (e) {}
     });
 
     const lightingRows = lightingBody.querySelectorAll('tr');
@@ -216,6 +226,25 @@
             if (inp) inp.value = rowData[name] || '';
           });
         }
+      });
+    }
+
+    // Restore ink canvas images saved in previous session
+    if (data.canvases && typeof data.canvases === 'object') {
+      Object.keys(data.canvases).forEach(function (field) {
+        var dataUrl = data.canvases[field];
+        if (!dataUrl) return;
+        var canvas = form.querySelector('.ink-canvas[data-field="' + field + '"]');
+        if (!canvas) return;
+        var img = new Image();
+        img.onload = function () {
+          var ctx = canvas.getContext('2d');
+          if (!ctx) return;
+          ctx.clearRect(0, 0, canvas.width, canvas.height);
+          // Draw at canvas resolution (ink may have been saved at different size)
+          ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
+        };
+        img.src = dataUrl;
       });
     }
 
@@ -353,36 +382,172 @@
     scheduleSave();
   }
 
-  // ── Scribble-native notes (iPadOS 14+) ────────────────────────────────────
-  // Apple Pencil + Scribble writes directly into any editable <textarea>.
-  // The OS handles handwriting recognition with zero latency and no stroke
-  // breaks — pen lifts between characters are handled natively by the system.
+  // ── Apple Pencil ink canvas ──────────────────────────────────────────────
+  // Uses Touch Events with touch.touchType === 'stylus' — the correct iOS API
+  // for Apple Pencil. Pointer Events on iOS Safari have a system-level gesture
+  // disambiguation delay on every new pointerdown (breaks print writing).
+  // Touch Events with touchType='stylus' fire immediately with no delay.
   //
-  // Rules for Scribble to activate:
-  //   1. Element must NOT be disabled or readonly
-  //   2. Standard <textarea> or <input> — no canvas overlay intercepting events
-  //   3. No touch-action restrictions on the element itself
+  // Canvas data is serialised into getFormData() / setFormData() so ink
+  // persists through the existing IDB/localStorage save with zero schema changes.
+
+  var _canvasSaveTimers = {};
+
+  function scheduleCanvasSave(field) {
+    if (_canvasSaveTimers[field]) clearTimeout(_canvasSaveTimers[field]);
+    _canvasSaveTimers[field] = setTimeout(function () {
+      delete _canvasSaveTimers[field];
+      scheduleSave(); // piggyback on the normal form save
+    }, 1200);
+  }
+
+  function initPencilCanvas(canvas, field) {
+    var ctx = canvas.getContext('2d');
+    if (!ctx) return;
+
+    // Size the canvas to fill its container
+    function sizeCanvas() {
+      var wrap = canvas.parentElement;
+      var w = wrap.clientWidth || 800;
+      // Preserve existing ink when resizing
+      var tmpCanvas = null;
+      if (canvas.width > 0 && canvas.height > 0) {
+        tmpCanvas = document.createElement('canvas');
+        tmpCanvas.width = canvas.width;
+        tmpCanvas.height = canvas.height;
+        tmpCanvas.getContext('2d').drawImage(canvas, 0, 0);
+      }
+      canvas.width  = w;
+      canvas.height = 2400;
+      canvas.style.width  = w + 'px';
+      canvas.style.height = '2400px';
+      // Restore ink
+      if (tmpCanvas) ctx.drawImage(tmpCanvas, 0, 0);
+      // Re-apply drawing styles (canvas state resets on resize)
+      ctx.lineCap  = 'round';
+      ctx.lineJoin = 'round';
+      ctx.strokeStyle = '#1a1a1a';
+      ctx.fillStyle   = '#1a1a1a';
+    }
+    sizeCanvas();
+    window.addEventListener('resize', sizeCanvas);
+
+    var drawing = false;
+    var lastX = 0, lastY = 0;
+
+    function posFromTouch(touch) {
+      var rect = canvas.getBoundingClientRect();
+      // canvas may be display-scaled; map CSS px → canvas px
+      var scaleX = canvas.width  / rect.width;
+      var scaleY = canvas.height / rect.height;
+      return {
+        x: (touch.clientX - rect.left) * scaleX,
+        y: (touch.clientY - rect.top)  * scaleY,
+        // force is 0–1 on Apple Pencil (1st/2nd gen); 0 on unsupported
+        force: touch.force || 0.5
+      };
+    }
+
+    function onTouchStart(e) {
+      // Only respond to Apple Pencil — ignore finger / palm
+      var pencil = null;
+      for (var i = 0; i < e.changedTouches.length; i++) {
+        if (e.changedTouches[i].touchType === 'stylus') {
+          pencil = e.changedTouches[i];
+          break;
+        }
+      }
+      if (!pencil) return;
+      e.preventDefault(); // stop scroll / selection
+      drawing = true;
+      var p = posFromTouch(pencil);
+      lastX = p.x;
+      lastY = p.y;
+      // Draw a pressure-sized dot so a tap leaves a mark
+      ctx.beginPath();
+      ctx.arc(lastX, lastY, Math.max(0.5, 2.0 * p.force), 0, Math.PI * 2);
+      ctx.fill();
+    }
+
+    function onTouchMove(e) {
+      if (!drawing) return;
+      var pencil = null;
+      for (var i = 0; i < e.changedTouches.length; i++) {
+        if (e.changedTouches[i].touchType === 'stylus') {
+          pencil = e.changedTouches[i];
+          break;
+        }
+      }
+      if (!pencil) return;
+      e.preventDefault();
+      var p = posFromTouch(pencil);
+      ctx.lineWidth = Math.max(0.8, 3.5 * p.force);
+      ctx.beginPath();
+      ctx.moveTo(lastX, lastY);
+      ctx.lineTo(p.x, p.y);
+      ctx.stroke();
+      lastX = p.x;
+      lastY = p.y;
+    }
+
+    function onTouchEnd(e) {
+      if (!drawing) return;
+      // Check it's the pencil lifting (not a stray finger-end)
+      for (var i = 0; i < e.changedTouches.length; i++) {
+        if (e.changedTouches[i].touchType === 'stylus') {
+          drawing = false;
+          scheduleCanvasSave(field);
+          return;
+        }
+      }
+    }
+
+    // { passive: false } required so preventDefault() inside actually works
+    canvas.addEventListener('touchstart',  onTouchStart, { passive: false });
+    canvas.addEventListener('touchmove',   onTouchMove,  { passive: false });
+    canvas.addEventListener('touchend',    onTouchEnd,   { passive: false });
+    canvas.addEventListener('touchcancel', onTouchEnd,   { passive: false });
+  }
+
   function addHandwrittenCanvases() {
     form.querySelectorAll('textarea[name^="notes_continuous_"]').forEach(function (ta) {
-      // Scribble silently refuses on disabled / readonly elements
-      ta.readOnly = false;
-      ta.disabled = false;
-      ta.removeAttribute('readonly');
-      ta.removeAttribute('disabled');
+      var field = ta.name;
 
-      // Tell iPadOS this is a freeform text / notes field
-      ta.setAttribute('inputmode', 'text');
-      ta.setAttribute('autocorrect', 'off');
-      ta.setAttribute('autocomplete', 'off');
-      ta.setAttribute('spellcheck', 'false');
-      ta.placeholder = 'Write with Apple Pencil (Scribble) or type — all notes auto-save.';
-      ta.classList.add('scribble-notes');
-      ta.style.minHeight = '320px';
-      ta.style.resize = 'vertical';
+      // Build the ink area wrapper
+      var wrap = document.createElement('div');
+      wrap.className = 'ink-area-wrap';
 
-      // Wire into autosave — duplicate listeners are harmless
-      ta.addEventListener('input',  scheduleSave);
-      ta.addEventListener('change', scheduleSave);
+      // Scrollable viewport — finger scrolls here, pencil draws on canvas inside
+      var scrollBox = document.createElement('div');
+      scrollBox.className = 'ink-scroll-box';
+
+      var canvas = document.createElement('canvas');
+      canvas.className = 'ink-canvas';
+      canvas.setAttribute('data-field', field);
+
+      scrollBox.appendChild(canvas);
+      wrap.appendChild(scrollBox);
+
+      // Toolbar
+      var toolbar = document.createElement('div');
+      toolbar.className = 'ink-toolbar';
+      toolbar.innerHTML =
+        '<span class="ink-hint">✏️ Apple Pencil to write &nbsp;|&nbsp; Finger to scroll</span>' +
+        '<button type="button" class="btn btn-clear-canvas">Clear</button>';
+      wrap.appendChild(toolbar);
+
+      toolbar.querySelector('.btn-clear-canvas').addEventListener('click', function () {
+        var ctx = canvas.getContext('2d');
+        if (ctx) ctx.clearRect(0, 0, canvas.width, canvas.height);
+        scheduleSave();
+      });
+
+      // Insert after the existing textarea (which we hide — it still holds the name
+      // so getFormData() can carry the canvas data URL through the normal save path)
+      ta.style.display = 'none';
+      ta.parentNode.insertBefore(wrap, ta.nextSibling);
+
+      initPencilCanvas(canvas, field);
     });
   }
 
@@ -418,6 +583,11 @@
     });
     while (lightingBody.rows.length > 1) lightingBody.deleteRow(1);
     while (powerMiscBody.rows.length > 1) powerMiscBody.deleteRow(1);
+    // Clear ink canvases
+    form.querySelectorAll('.ink-canvas').forEach(function (canvas) {
+      var ctx = canvas.getContext('2d');
+      if (ctx) ctx.clearRect(0, 0, canvas.width, canvas.height);
+    });
     if (useIndexedDB) {
       idb().then((db) => {
         return new Promise((resolve, reject) => {

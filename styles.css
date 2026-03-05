@@ -301,7 +301,6 @@ body {
 
 /* ── Apple Pencil ink canvas area ─────────────────────────────────── */
 
-/* Outer wrapper */
 .ink-area-wrap {
   margin-top: 12px;
   border: 2px solid var(--border);
@@ -310,7 +309,43 @@ body {
   overflow: hidden;
 }
 
-/* Scrollable viewport — finger pan-y scrolls, pencil draws on canvas inside */
+/* Each page block */
+.ink-page {
+  border-bottom: 2px solid var(--border);
+}
+.ink-page:last-child {
+  border-bottom: none;
+}
+
+/* Page header: label + optional remove button */
+.ink-page-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 8px 14px 6px;
+  background: #f0f4f8;
+  border-bottom: 1px solid var(--border);
+}
+.ink-page-label {
+  font-size: 0.8rem;
+  font-weight: 600;
+  color: var(--text-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+.btn-remove-ink-page {
+  padding: 4px 10px;
+  font-size: 0.8rem;
+  background: #fff5f5;
+  color: #c53030;
+  border: 1px solid #feb2b2;
+  border-radius: var(--radius);
+  cursor: pointer;
+  min-height: 30px;
+}
+.btn-remove-ink-page:hover { background: #fed7d7; }
+
+/* Scrollable viewport — finger scrolls, pencil draws */
 .ink-scroll-box {
   width: 100%;
   max-height: 55vh;
@@ -318,9 +353,6 @@ body {
   overflow-y: auto;
   overflow-x: hidden;
   -webkit-overflow-scrolling: touch;
-  /* pan-y on the SCROLL BOX means fingers can scroll it;
-     the canvas inside has touch-action:none so the pencil
-     never triggers a scroll — it draws immediately */
   touch-action: pan-y;
   background: #fff;
   background-image: repeating-linear-gradient(
@@ -333,31 +365,48 @@ body {
   background-attachment: local;
 }
 
-/* The drawing surface — must be touch-action:none so every pencil
-   touchstart fires instantly with zero system delay */
+/* Drawing surface — touch-action:none is non-negotiable:
+   any other value causes iOS to run gesture disambiguation
+   on every new touchstart, breaking print-style writing */
 .ink-canvas {
   display: block;
   width: 100%;
-  /* height set by JS to 2400px so there is plenty of scroll room */
   touch-action: none;
   cursor: crosshair;
   background: transparent;
 }
 
-/* Toolbar below the canvas */
+/* Toolbar */
 .ink-toolbar {
   display: flex;
   align-items: center;
   justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 8px;
   padding: 10px 14px;
   border-top: 1px solid var(--border);
   background: #f7f9fc;
 }
-
 .ink-hint {
   font-size: 0.85rem;
   color: var(--text-muted);
 }
+.ink-toolbar-btns {
+  display: flex;
+  gap: 8px;
+}
+.btn-add-ink-page {
+  padding: 8px 14px;
+  font-size: 0.875rem;
+  background: var(--accent);
+  color: #fff;
+  border: none;
+  border-radius: var(--radius);
+  cursor: pointer;
+  min-height: 36px;
+  font-weight: 600;
+}
+.btn-add-ink-page:hover { background: var(--primary-light); }
 
 .btn-clear-canvas {
   padding: 8px 14px;
@@ -370,9 +419,7 @@ body {
   min-height: 36px;
 }
 .btn-clear-canvas:hover,
-.btn-clear-canvas:focus {
-  background: #fed7d7;
-}
+.btn-clear-canvas:focus { background: #fed7d7; }
 
 .notes-pages-container {
   margin-top: 16px;

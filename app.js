@@ -124,6 +124,48 @@
     }
   }
 
+  // Crop canvas to the bounding box of actual ink, composite on white, return PNG data URL.
+  // Returns null if the canvas is empty.
+  function cropCanvasToInk(canvas) {
+    if (!canvas || !canvas.getContext) return null;
+    try {
+      var ctx = canvas.getContext('2d');
+      if (!ctx) return null;
+      var w = canvas.width, h = canvas.height;
+      if (w === 0 || h === 0) return null;
+      var imageData = ctx.getImageData(0, 0, w, h);
+      var d = imageData.data;
+      var minX = w, minY = h, maxX = 0, maxY = 0, hasInk = false;
+      for (var y = 0; y < h; y++) {
+        for (var x = 0; x < w; x++) {
+          var i = (y * w + x) * 4;
+          // Ink = opaque AND not white/near-white
+          if (d[i+3] > 30 && (d[i] < 220 || d[i+1] < 220 || d[i+2] < 220)) {
+            hasInk = true;
+            if (x < minX) minX = x;
+            if (x > maxX) maxX = x;
+            if (y < minY) minY = y;
+            if (y > maxY) maxY = y;
+          }
+        }
+      }
+      if (!hasInk) return null;
+      var pad = 24;
+      minX = Math.max(0, minX - pad);
+      minY = Math.max(0, minY - pad);
+      maxX = Math.min(w - 1, maxX + pad);
+      maxY = Math.min(h - 1, maxY + pad);
+      var cw = maxX - minX + 1, ch = maxY - minY + 1;
+      var tmp = document.createElement('canvas');
+      tmp.width = cw; tmp.height = ch;
+      var tctx = tmp.getContext('2d');
+      tctx.fillStyle = '#ffffff';
+      tctx.fillRect(0, 0, cw, ch);
+      tctx.drawImage(canvas, minX, minY, cw, ch, 0, 0, cw, ch);
+      return tmp.toDataURL('image/png');
+    } catch (e) { return null; }
+  }
+
   function getFormData() {
     const data = { fields: {}, lightingRows: 1, powerMiscRows: 1, lighting: [], powerMisc: [], canvases: {} };
 
@@ -138,16 +180,17 @@
       }
     });
 
-    // Capture ink canvases into the save payload (as compact JPEG data URLs)
-    form.querySelectorAll('.ink-canvas[data-field]').forEach(function (canvas) {
-      try {
-        if (!canvasHasContent(canvas)) return;
-        // JPEG at 0.7 quality: ~10-30 KB per canvas vs ~200 KB for PNG
-        var dataUrl = canvas.toDataURL('image/jpeg', 0.7);
-        if (dataUrl && dataUrl.length > 100) {
-          data.canvases[canvas.getAttribute('data-field')] = dataUrl;
-        }
-      } catch (e) {}
+    // Capture ink pages grouped by field — array of cropped PNG data URLs per field
+    form.querySelectorAll('.ink-area-wrap[data-ink-field]').forEach(function (wrap) {
+      var field = wrap.getAttribute('data-ink-field');
+      var pages = [];
+      wrap.querySelectorAll('.ink-canvas').forEach(function (canvas) {
+        pages.push(cropCanvasToInk(canvas) || null);
+      });
+      // Only store if at least one page has ink
+      if (pages.some(function (p) { return p !== null; })) {
+        data.canvases[field] = pages;
+      }
     });
 
     const lightingRows = lightingBody.querySelectorAll('tr');
@@ -229,22 +272,36 @@
       });
     }
 
-    // Restore ink canvas images saved in previous session
+    // Restore ink pages from previous session
     if (data.canvases && typeof data.canvases === 'object') {
       Object.keys(data.canvases).forEach(function (field) {
-        var dataUrl = data.canvases[field];
-        if (!dataUrl) return;
-        var canvas = form.querySelector('.ink-canvas[data-field="' + field + '"]');
-        if (!canvas) return;
-        var img = new Image();
-        img.onload = function () {
-          var ctx = canvas.getContext('2d');
-          if (!ctx) return;
-          ctx.clearRect(0, 0, canvas.width, canvas.height);
-          // Draw at canvas resolution (ink may have been saved at different size)
-          ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
-        };
-        img.src = dataUrl;
+        var pages = data.canvases[field];
+        // Backward compat: old format stored a single string
+        if (typeof pages === 'string') pages = [pages];
+        if (!Array.isArray(pages) || !pages.length) return;
+        var wrap = form.querySelector('.ink-area-wrap[data-ink-field="' + field + '"]');
+        if (!wrap) return;
+        var pc = wrap.querySelector('.ink-pages-container');
+        if (!pc) return;
+        pages.forEach(function (dataUrl, pageIdx) {
+          if (!dataUrl) return;
+          var existingCanvases = pc.querySelectorAll('.ink-canvas');
+          var canvas = existingCanvases[pageIdx];
+          if (!canvas) {
+            // Create extra page if needed
+            canvas = addInkPage(field, pc, false);
+          }
+          var img = new Image();
+          img.onload = (function (c) {
+            return function () {
+              var ctx = c.getContext('2d');
+              if (!ctx) return;
+              ctx.clearRect(0, 0, c.width, c.height);
+              ctx.drawImage(img, 0, 0, c.width, c.height);
+            };
+          })(canvas);
+          img.src = dataUrl;
+        });
       });
     }
 
@@ -509,45 +566,116 @@
     canvas.addEventListener('touchcancel', onTouchEnd,   { passive: false });
   }
 
+  // Add a single ink page (canvas + scroll wrapper) to the given pages container.
+  // Returns the new canvas element.
+  function addInkPage(field, pagesContainer, isFirst) {
+    var pageIndex = pagesContainer.querySelectorAll('.ink-page').length;
+
+    var page = document.createElement('div');
+    page.className = 'ink-page';
+
+    // Page header row
+    var pageHeader = document.createElement('div');
+    pageHeader.className = 'ink-page-header';
+
+    var pageLabel = document.createElement('span');
+    pageLabel.className = 'ink-page-label';
+    pageLabel.textContent = 'Page ' + (pageIndex + 1);
+    pageHeader.appendChild(pageLabel);
+
+    if (!isFirst) {
+      // Pages beyond the first can be individually removed
+      var removeBtn = document.createElement('button');
+      removeBtn.type = 'button';
+      removeBtn.className = 'btn btn-remove-ink-page';
+      removeBtn.textContent = '✕ Remove page';
+      removeBtn.addEventListener('click', function () {
+        if (!confirm('Remove this notes page?')) return;
+        page.remove();
+        // Re-number remaining page labels
+        pagesContainer.querySelectorAll('.ink-page-label').forEach(function (lbl, i) {
+          lbl.textContent = 'Page ' + (i + 1);
+        });
+        scheduleSave();
+      });
+      pageHeader.appendChild(removeBtn);
+    }
+
+    page.appendChild(pageHeader);
+
+    var scrollBox = document.createElement('div');
+    scrollBox.className = 'ink-scroll-box';
+
+    var canvas = document.createElement('canvas');
+    canvas.className = 'ink-canvas';
+    canvas.setAttribute('data-field', field);
+
+    scrollBox.appendChild(canvas);
+    page.appendChild(scrollBox);
+    pagesContainer.appendChild(page);
+
+    initPencilCanvas(canvas, field);
+    return canvas;
+  }
+
   function addHandwrittenCanvases() {
     form.querySelectorAll('textarea[name^="notes_continuous_"]').forEach(function (ta) {
       var field = ta.name;
 
-      // Build the ink area wrapper
       var wrap = document.createElement('div');
       wrap.className = 'ink-area-wrap';
+      wrap.setAttribute('data-ink-field', field);
 
-      // Scrollable viewport — finger scrolls here, pencil draws on canvas inside
-      var scrollBox = document.createElement('div');
-      scrollBox.className = 'ink-scroll-box';
+      var pagesContainer = document.createElement('div');
+      pagesContainer.className = 'ink-pages-container';
+      wrap.appendChild(pagesContainer);
 
-      var canvas = document.createElement('canvas');
-      canvas.className = 'ink-canvas';
-      canvas.setAttribute('data-field', field);
-
-      scrollBox.appendChild(canvas);
-      wrap.appendChild(scrollBox);
-
-      // Toolbar
+      // Toolbar: hint | [+ Add Page] [Clear All]
       var toolbar = document.createElement('div');
       toolbar.className = 'ink-toolbar';
-      toolbar.innerHTML =
-        '<span class="ink-hint">✏️ Apple Pencil to write &nbsp;|&nbsp; Finger to scroll</span>' +
-        '<button type="button" class="btn btn-clear-canvas">Clear</button>';
-      wrap.appendChild(toolbar);
 
-      toolbar.querySelector('.btn-clear-canvas').addEventListener('click', function () {
-        var ctx = canvas.getContext('2d');
-        if (ctx) ctx.clearRect(0, 0, canvas.width, canvas.height);
+      var hint = document.createElement('span');
+      hint.className = 'ink-hint';
+      hint.innerHTML = '✏️ Apple Pencil to write &nbsp;|&nbsp; Finger to scroll';
+      toolbar.appendChild(hint);
+
+      var btnGroup = document.createElement('div');
+      btnGroup.className = 'ink-toolbar-btns';
+
+      var addPageBtn = document.createElement('button');
+      addPageBtn.type = 'button';
+      addPageBtn.className = 'btn btn-add-ink-page';
+      addPageBtn.textContent = '+ Add Page';
+      addPageBtn.addEventListener('click', function () {
+        addInkPage(field, pagesContainer, false);
+      });
+
+      var clearBtn = document.createElement('button');
+      clearBtn.type = 'button';
+      clearBtn.className = 'btn btn-clear-canvas';
+      clearBtn.textContent = 'Clear All';
+      clearBtn.addEventListener('click', function () {
+        if (!confirm('Clear all handwritten notes in this section?')) return;
+        pagesContainer.querySelectorAll('.ink-canvas').forEach(function (c) {
+          var ctx = c.getContext('2d');
+          if (ctx) ctx.clearRect(0, 0, c.width, c.height);
+        });
+        // Remove all but first page
+        var pages = pagesContainer.querySelectorAll('.ink-page');
+        for (var i = pages.length - 1; i > 0; i--) pages[i].remove();
         scheduleSave();
       });
 
-      // Insert after the existing textarea (which we hide — it still holds the name
-      // so getFormData() can carry the canvas data URL through the normal save path)
+      btnGroup.appendChild(addPageBtn);
+      btnGroup.appendChild(clearBtn);
+      toolbar.appendChild(btnGroup);
+      wrap.appendChild(toolbar);
+
       ta.style.display = 'none';
       ta.parentNode.insertBefore(wrap, ta.nextSibling);
 
-      initPencilCanvas(canvas, field);
+      // Create first page
+      addInkPage(field, pagesContainer, true);
     });
   }
 
@@ -583,10 +711,15 @@
     });
     while (lightingBody.rows.length > 1) lightingBody.deleteRow(1);
     while (powerMiscBody.rows.length > 1) powerMiscBody.deleteRow(1);
-    // Clear ink canvases
-    form.querySelectorAll('.ink-canvas').forEach(function (canvas) {
-      var ctx = canvas.getContext('2d');
-      if (ctx) ctx.clearRect(0, 0, canvas.width, canvas.height);
+    // Clear ink canvases and remove extra pages (keep only first page per field)
+    form.querySelectorAll('.ink-pages-container').forEach(function (pc) {
+      var pages = pc.querySelectorAll('.ink-page');
+      for (var i = pages.length - 1; i > 0; i--) pages[i].remove();
+      var firstCanvas = pc.querySelector('.ink-canvas');
+      if (firstCanvas) {
+        var rctx = firstCanvas.getContext('2d');
+        if (rctx) rctx.clearRect(0, 0, firstCanvas.width, firstCanvas.height);
+      }
     });
     if (useIndexedDB) {
       idb().then((db) => {
@@ -918,9 +1051,12 @@
     const fields = data.fields || {};
     const has = (name) => (fields[name] || '').toString().trim() !== '';
     if (has('notes_continuous_' + sectionId)) return true;
-    // Ink canvas data is stored in data.canvases, not fields
-    const inkData = (data.canvases && data.canvases['notes_continuous_' + sectionId]) || '';
-    if (inkData.length > 100) return true;
+    // Ink canvas data is stored in data.canvases as an array of pages
+    const inkPages = (data.canvases && data.canvases['notes_continuous_' + sectionId]);
+    const hasInk = Array.isArray(inkPages)
+      ? inkPages.some(function (p) { return p && p.length > 100; })
+      : (typeof inkPages === 'string' && inkPages.length > 100);
+    if (hasInk) return true;
     const sectionPrefixes = {
       general: ['site_visit_date', 'facility_name', 'facility_location', 'facility_area', 'contact1_', 'contact2_', 'num_employees', 'production_schedule', 'office_schedule', 'major_products', 'annual_sales', 'raw_materials', 'final_wastes', 'labor_rates'],
       utility: ['electricity_', 'gas_supplier', 'gas_cost', 'water_supplier', 'water_cost', 'fuel_oil', 'solar_pv', 'renewable_'],
@@ -954,12 +1090,21 @@
   }
 
   async function addSectionNotesToPdf(ctx, sectionId, sectionLabel, data) {
-    const { addSubTitle, addTallImageFromUrl } = ctx;
-    // Canvas ink is stored in data.canvases keyed by textarea name
-    const inkData = (data.canvases && data.canvases['notes_continuous_' + sectionId]) || '';
-    if (inkData.length > 100) {
-      addSubTitle('Handwritten Notes');
-      await addTallImageFromUrl(inkData);
+    const { addSubTitle, addTallImageFromUrl, addLine } = ctx;
+    let pages = (data.canvases && data.canvases['notes_continuous_' + sectionId]);
+    if (!pages) return;
+    // Backward compat: old format was a single string
+    if (typeof pages === 'string') pages = [pages];
+    if (!Array.isArray(pages)) return;
+    // Only include pages that actually have ink (non-null, non-trivial data URL)
+    const inkPages = pages.filter(function (p) { return p && p.length > 100; });
+    if (!inkPages.length) return;
+    addSubTitle('Handwritten Notes');
+    for (let i = 0; i < inkPages.length; i++) {
+      if (inkPages.length > 1) {
+        addLine('— Notes page ' + (i + 1) + ' of ' + inkPages.length + ' —', false, 8, false);
+      }
+      await addTallImageFromUrl(inkPages[i]);
     }
   }
 

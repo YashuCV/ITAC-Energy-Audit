@@ -10,7 +10,7 @@
   <meta name="format-detection" content="telephone=no">
   <title>ITAC Energy Audit Form</title>
   <link rel="manifest" href="manifest.json">
-  <link rel="stylesheet" href="styles.css?v=3">
+  <link rel="stylesheet" href="styles.css?v=5">
   <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
   <meta http-equiv="Pragma" content="no-cache">
   <meta http-equiv="Expires" content="0">
@@ -70,16 +70,9 @@
           <label>Labor rates for site improvements <input type="text" name="labor_rates"></label>
         </div>
         <div class="tab-notes-area">
-          <h3>Extra points & notes</h3>
-          <label>Key points / extra notes for this section</label>
-          <textarea name="notes_extra_general" rows="4" placeholder="Type or scroll for more space…"></textarea>
-          <div class="notes-pages-container" data-section="general">
-            <input type="hidden" name="notes_page_count_general" value="1">
-            <div class="notes-page" data-page-index="0">
-              <label>Notes page 1</label>
-              <textarea name="notes_page_general_0" rows="14" placeholder="Use this area for handwritten notes or extra details…"></textarea>
-            </div>
-            <button type="button" class="btn btn-add-notes-page" data-section="general">+ Add another notes page</button>
+          <div class="notes-continuous-container">
+            <label>Continuous notes (draw below)</label>
+            <textarea name="notes_continuous_general" class="notes-continuous" rows="24" placeholder="Use Apple Pencil only to draw (finger and hand rest are ignored)."></textarea>
           </div>
         </div>
       </section>
@@ -104,16 +97,9 @@
           <p class="section-note">Possible Recommendations: Install solar PV; Install wastewater meter.</p>
         </div>
         <div class="tab-notes-area">
-          <h3>Extra points & notes</h3>
-          <label>Key points / extra notes for this section</label>
-          <textarea name="notes_extra_utility" rows="4" placeholder="Type or scroll for more space…"></textarea>
-          <div class="notes-pages-container" data-section="utility">
-            <input type="hidden" name="notes_page_count_utility" value="1">
-            <div class="notes-page" data-page-index="0">
-              <label>Notes page 1</label>
-              <textarea name="notes_page_utility_0" rows="14" placeholder="Use this area for handwritten notes or extra details…"></textarea>
-            </div>
-            <button type="button" class="btn btn-add-notes-page" data-section="utility">+ Add another notes page</button>
+          <div class="notes-continuous-container">
+            <label>Continuous notes (draw below)</label>
+            <textarea name="notes_continuous_utility" class="notes-continuous" rows="24" placeholder="Use Apple Pencil only to draw (finger and hand rest are ignored)."></textarea>
           </div>
         </div>
       </section>
@@ -159,16 +145,9 @@
           <p class="section-note">Possible Recommendations: Replace with LED; Install occupancy sensors; Install lighting control panels.</p>
         </div>
         <div class="tab-notes-area">
-          <h3>Extra points & notes</h3>
-          <label>Key points / extra notes for this section</label>
-          <textarea name="notes_extra_lighting" rows="4" placeholder="Type or scroll for more space…"></textarea>
-          <div class="notes-pages-container" data-section="lighting">
-            <input type="hidden" name="notes_page_count_lighting" value="1">
-            <div class="notes-page" data-page-index="0">
-              <label>Notes page 1</label>
-              <textarea name="notes_page_lighting_0" rows="14" placeholder="Use this area for handwritten notes or extra details…"></textarea>
-            </div>
-            <button type="button" class="btn btn-add-notes-page" data-section="lighting">+ Add another notes page</button>
+          <div class="notes-continuous-container">
+            <label>Continuous notes (draw below)</label>
+            <textarea name="notes_continuous_lighting" class="notes-continuous" rows="24" placeholder="Use Apple Pencil only to draw (finger and hand rest are ignored)."></textarea>
           </div>
         </div>
       </section>
@@ -218,16 +197,9 @@
           <p class="section-note">Replace HVAC with high efficiency; Clean coils; Install programmable thermostat; BMS; Setbacks; Automation; Natural gas infrared heaters; Destratification fans.</p>
         </div>
         <div class="tab-notes-area">
-          <h3>Extra points & notes</h3>
-          <label>Key points / extra notes for this section</label>
-          <textarea name="notes_extra_hvac" rows="4" placeholder="Type or scroll for more space…"></textarea>
-          <div class="notes-pages-container" data-section="hvac">
-            <input type="hidden" name="notes_page_count_hvac" value="1">
-            <div class="notes-page" data-page-index="0">
-              <label>Notes page 1</label>
-              <textarea name="notes_page_hvac_0" rows="14" placeholder="Use this area for handwritten notes or extra details…"></textarea>
-            </div>
-            <button type="button" class="btn btn-add-notes-page" data-section="hvac">+ Add another notes page</button>
+          <div class="notes-continuous-container">
+            <label>Continuous notes (draw below)</label>
+            <textarea name="notes_continuous_hvac" class="notes-continuous" rows="24" placeholder="Use Apple Pencil only to draw (finger and hand rest are ignored)."></textarea>
           </div>
         </div>
       </section>
@@ -274,16 +246,9 @@
           <p class="section-note">Reduce pressure; Install central storage; Booster pump; Leak maintenance program.</p>
         </div>
         <div class="tab-notes-area">
-          <h3>Extra points & notes</h3>
-          <label>Key points / extra notes for this section</label>
-          <textarea name="notes_extra_compressed_air" rows="4" placeholder="Type or scroll for more space…"></textarea>
-          <div class="notes-pages-container" data-section="compressed_air">
-            <input type="hidden" name="notes_page_count_compressed_air" value="1">
-            <div class="notes-page" data-page-index="0">
-              <label>Notes page 1</label>
-              <textarea name="notes_page_compressed_air_0" rows="14" placeholder="Use this area for handwritten notes or extra details…"></textarea>
-            </div>
-            <button type="button" class="btn btn-add-notes-page" data-section="compressed_air">+ Add another notes page</button>
+          <div class="notes-continuous-container">
+            <label>Continuous notes (draw below)</label>
+            <textarea name="notes_continuous_compressed_air" class="notes-continuous" rows="24" placeholder="Use Apple Pencil only to draw (finger and hand rest are ignored)."></textarea>
           </div>
         </div>
       </section>
@@ -324,16 +289,9 @@
           <p class="section-note">Condensate recycling; Boiler maintenance; Steam trap program; Economizers; Insulate pipes; Auto trim; Reduce blowdown.</p>
         </div>
         <div class="tab-notes-area">
-          <h3>Extra points & notes</h3>
-          <label>Key points / extra notes for this section</label>
-          <textarea name="notes_extra_boiler" rows="4" placeholder="Type or scroll for more space…"></textarea>
-          <div class="notes-pages-container" data-section="boiler">
-            <input type="hidden" name="notes_page_count_boiler" value="1">
-            <div class="notes-page" data-page-index="0">
-              <label>Notes page 1</label>
-              <textarea name="notes_page_boiler_0" rows="14" placeholder="Use this area for handwritten notes or extra details…"></textarea>
-            </div>
-            <button type="button" class="btn btn-add-notes-page" data-section="boiler">+ Add another notes page</button>
+          <div class="notes-continuous-container">
+            <label>Continuous notes (draw below)</label>
+            <textarea name="notes_continuous_boiler" class="notes-continuous" rows="24" placeholder="Use Apple Pencil only to draw (finger and hand rest are ignored)."></textarea>
           </div>
         </div>
       </section>
@@ -370,16 +328,9 @@
           <p class="section-note">Energy efficient windows; Wall/ceiling insulation; High speed doors; Vestibule/air curtain.</p>
         </div>
         <div class="tab-notes-area">
-          <h3>Extra points & notes</h3>
-          <label>Key points / extra notes for this section</label>
-          <textarea name="notes_extra_envelope" rows="4" placeholder="Type or scroll for more space…"></textarea>
-          <div class="notes-pages-container" data-section="envelope">
-            <input type="hidden" name="notes_page_count_envelope" value="1">
-            <div class="notes-page" data-page-index="0">
-              <label>Notes page 1</label>
-              <textarea name="notes_page_envelope_0" rows="14" placeholder="Use this area for handwritten notes or extra details…"></textarea>
-            </div>
-            <button type="button" class="btn btn-add-notes-page" data-section="envelope">+ Add another notes page</button>
+          <div class="notes-continuous-container">
+            <label>Continuous notes (draw below)</label>
+            <textarea name="notes_continuous_envelope" class="notes-continuous" rows="24" placeholder="Use Apple Pencil only to draw (finger and hand rest are ignored)."></textarea>
           </div>
         </div>
       </section>
@@ -418,16 +369,9 @@
           <p class="section-note">Capacitor bank; Vendmizers; Motor maintenance; Battery forklifts; Off-peak charging; NEMA premium motors; Turn off conveyors when not in use.</p>
         </div>
         <div class="tab-notes-area">
-          <h3>Extra points & notes</h3>
-          <label>Key points / extra notes for this section</label>
-          <textarea name="notes_extra_power" rows="4" placeholder="Type or scroll for more space…"></textarea>
-          <div class="notes-pages-container" data-section="power">
-            <input type="hidden" name="notes_page_count_power" value="1">
-            <div class="notes-page" data-page-index="0">
-              <label>Notes page 1</label>
-              <textarea name="notes_page_power_0" rows="14" placeholder="Use this area for handwritten notes or extra details…"></textarea>
-            </div>
-            <button type="button" class="btn btn-add-notes-page" data-section="power">+ Add another notes page</button>
+          <div class="notes-continuous-container">
+            <label>Continuous notes (draw below)</label>
+            <textarea name="notes_continuous_power" class="notes-continuous" rows="24" placeholder="Use Apple Pencil only to draw (finger and hand rest are ignored)."></textarea>
           </div>
         </div>
       </section>
@@ -451,16 +395,9 @@
           <p class="section-note">Replace cooling tower with premium efficient unit.</p>
         </div>
         <div class="tab-notes-area">
-          <h3>Extra points & notes</h3>
-          <label>Key points / extra notes for this section</label>
-          <textarea name="notes_extra_chillers" rows="4" placeholder="Type or scroll for more space…"></textarea>
-          <div class="notes-pages-container" data-section="chillers">
-            <input type="hidden" name="notes_page_count_chillers" value="1">
-            <div class="notes-page" data-page-index="0">
-              <label>Notes page 1</label>
-              <textarea name="notes_page_chillers_0" rows="14" placeholder="Use this area for handwritten notes or extra details…"></textarea>
-            </div>
-            <button type="button" class="btn btn-add-notes-page" data-section="chillers">+ Add another notes page</button>
+          <div class="notes-continuous-container">
+            <label>Continuous notes (draw below)</label>
+            <textarea name="notes_continuous_chillers" class="notes-continuous" rows="24" placeholder="Use Apple Pencil only to draw (finger and hand rest are ignored)."></textarea>
           </div>
         </div>
       </section>
@@ -506,16 +443,9 @@
           <p class="section-note">Waste heat from stack; CHP/cogeneration.</p>
         </div>
         <div class="tab-notes-area">
-          <h3>Extra points & notes</h3>
-          <label>Key points / extra notes for this section</label>
-          <textarea name="notes_extra_generator" rows="4" placeholder="Type or scroll for more space…"></textarea>
-          <div class="notes-pages-container" data-section="generator">
-            <input type="hidden" name="notes_page_count_generator" value="1">
-            <div class="notes-page" data-page-index="0">
-              <label>Notes page 1</label>
-              <textarea name="notes_page_generator_0" rows="14" placeholder="Use this area for handwritten notes or extra details…"></textarea>
-            </div>
-            <button type="button" class="btn btn-add-notes-page" data-section="generator">+ Add another notes page</button>
+          <div class="notes-continuous-container">
+            <label>Continuous notes (draw below)</label>
+            <textarea name="notes_continuous_generator" class="notes-continuous" rows="24" placeholder="Use Apple Pencil only to draw (finger and hand rest are ignored)."></textarea>
           </div>
         </div>
       </section>
@@ -524,7 +454,7 @@
   </main>
 
   <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
-  <script src="app.js?v=3"></script>
+  <script src="app.js?v=5"></script>
 </body>
 </html>
 

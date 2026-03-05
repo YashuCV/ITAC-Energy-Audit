@@ -271,6 +271,34 @@ body {
   margin-bottom: 20px;
 }
 
+.notes-continuous-container {
+  margin-top: 16px;
+}
+
+.notes-continuous-container label {
+  display: block;
+  font-weight: 600;
+  margin-bottom: 8px;
+  color: var(--text-muted);
+}
+
+.notes-continuous {
+  display: block;
+  width: 100%;
+  min-height: 320px;
+  padding: 12px 14px;
+  font-size: 16px;
+  line-height: 1.5;
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  background: #fff;
+  -webkit-appearance: none;
+  appearance: none;
+  font-family: inherit;
+  resize: vertical;
+  box-sizing: border-box;
+}
+
 .notes-pages-container {
   margin-top: 16px;
 }

@@ -415,13 +415,13 @@
   }
 
   function injectHandwrittenBlock(textareaEl) {
-    if (!textareaEl || (textareaEl.name.indexOf('notes_extra_') !== 0 && textareaEl.name.indexOf('notes_page_') !== 0)) return;
+    if (!textareaEl || textareaEl.name.indexOf('notes_continuous_') !== 0) return;
     if (textareaEl.closest && textareaEl.closest('.notes-combo-box')) return;
     var field = textareaEl.name;
     var wrapper = document.createElement('div');
     wrapper.className = 'notes-combo-box draw-mode';
     textareaEl.classList.add('notes-combo-textarea');
-    textareaEl.placeholder = 'Use Apple Pencil or finger to draw handwritten notes (appears as ink in PDF).';
+    textareaEl.placeholder = 'Use Apple Pencil only to draw (finger and hand rest are ignored).';
     textareaEl.readOnly = true;
     textareaEl.disabled = true;
     var parent = textareaEl.parentNode;
@@ -490,6 +490,7 @@
     }
 
     function start(e) {
+      if (e.pointerType !== 'pen') return;
       e.preventDefault();
       drawing = true;
       var p = getPos(e);
@@ -520,13 +521,10 @@
     canvas.addEventListener('pointermove', move);
     canvas.addEventListener('pointerup', end);
     canvas.addEventListener('pointerleave', end);
-    canvas.addEventListener('touchstart', function (e) { e.preventDefault(); start(e.touches[0]); }, { passive: false });
-    canvas.addEventListener('touchmove', function (e) { e.preventDefault(); move(e.touches[0]); }, { passive: false });
-    canvas.addEventListener('touchend', function (e) { e.preventDefault(); end(e.changedTouches[0] || e.touches[0]); }, { passive: false });
   }
 
   function addHandwrittenCanvases() {
-    form.querySelectorAll('textarea[name^="notes_extra_"], textarea[name^="notes_page_"]').forEach(function (ta) {
+    form.querySelectorAll('textarea[name^="notes_continuous_"]').forEach(function (ta) {
       injectHandwrittenBlock(ta);
     });
   }
@@ -563,14 +561,6 @@
     });
     while (lightingBody.rows.length > 1) lightingBody.deleteRow(1);
     while (powerMiscBody.rows.length > 1) powerMiscBody.deleteRow(1);
-    TAB_IDS.forEach((sectionId) => {
-      const container = form.querySelector('.notes-pages-container[data-section="' + sectionId + '"]');
-      if (!container) return;
-      const countInput = container.querySelector('input[name="notes_page_count_' + sectionId + '"]');
-      if (countInput) countInput.value = '1';
-      const pages = container.querySelectorAll('.notes-page');
-      for (let i = 1; i < pages.length; i++) pages[i].remove();
-    });
     form.querySelectorAll('.handwritten-canvas').forEach(function (canvas) {
       var ctx = canvas.getContext('2d');
       if (ctx) {
@@ -867,11 +857,9 @@
   function hasSectionContent(sectionId, data) {
     const fields = data.fields || {};
     const has = (name) => (fields[name] || '').toString().trim() !== '';
-    if (has('notes_extra_' + sectionId)) return true;
-    const count = parseInt(fields['notes_page_count_' + sectionId], 10) || 0;
-    for (let i = 0; i < count; i++) {
-      if (has('notes_page_' + sectionId + '_' + i)) return true;
-    }
+    if (has('notes_continuous_' + sectionId)) return true;
+    const hand = (fields['notes_continuous_' + sectionId + '_handwritten'] || '').toString();
+    if (hand.length > 100) return true;
     const sectionPrefixes = {
       general: ['site_visit_date', 'facility_name', 'facility_location', 'facility_area', 'contact1_', 'contact2_', 'num_employees', 'production_schedule', 'office_schedule', 'major_products', 'annual_sales', 'raw_materials', 'final_wastes', 'labor_rates'],
       utility: ['electricity_', 'gas_supplier', 'gas_cost', 'water_supplier', 'water_cost', 'fuel_oil', 'solar_pv', 'renewable_'],
@@ -905,35 +893,12 @@
   }
 
   async function addSectionNotesToPdf(ctx, sectionId, sectionLabel, data) {
-    const { addLine, addSubTitle, addImageFromUrl } = ctx;
+    const { addSubTitle, addImageFromUrl } = ctx;
     const fields = data.fields || {};
-    const val = (name) => (fields[name] || '').toString().trim();
-    const extra = val('notes_extra_' + sectionId);
-    const extraHand = val('notes_extra_' + sectionId + '_handwritten');
-    if (extra || (extraHand && extraHand.length > 100)) {
-      addSubTitle('Extra points / key notes');
-      if (extra) {
-        addLine(extra);
-      }
-      if (extraHand && extraHand.length > 100) {
-        addSubTitle('Handwritten note (ink)');
-        await addImageFromUrl(extraHand);
-      }
-    }
-    const count = parseInt(fields['notes_page_count_' + sectionId], 10) || 0;
-    for (let i = 0; i < count; i++) {
-      const pageText = val('notes_page_' + sectionId + '_' + i);
-      const pageHand = val('notes_page_' + sectionId + '_' + i + '_handwritten');
-      if (pageText || (pageHand && pageHand.length > 100)) {
-        addSubTitle('Notes page ' + (i + 1));
-        if (pageText) {
-          addLine(pageText);
-        }
-        if (pageHand && pageHand.length > 100) {
-          addSubTitle('Handwritten (ink) – page ' + (i + 1));
-          await addImageFromUrl(pageHand);
-        }
-      }
+    const hand = (fields['notes_continuous_' + sectionId + '_handwritten'] || '').toString();
+    if (hand.length > 100) {
+      addSubTitle('Continuous notes (handwritten)');
+      await addImageFromUrl(hand);
     }
   }
 
@@ -1275,67 +1240,10 @@
     });
   }
 
-  function addNotesPage(sectionId) {
-    const container = form.querySelector('.notes-pages-container[data-section="' + sectionId + '"]');
-    if (!container) return;
-    const countInput = container.querySelector('input[name="notes_page_count_' + sectionId + '"]');
-    const count = parseInt(countInput.value, 10) || 0;
-    const nextIndex = count;
-    countInput.value = nextIndex + 1;
-
-    const pageDiv = document.createElement('div');
-    pageDiv.className = 'notes-page';
-    pageDiv.setAttribute('data-page-index', nextIndex);
-    pageDiv.innerHTML = `
-      <label>Notes page ${nextIndex + 1}</label>
-      <textarea name="notes_page_${sectionId}_${nextIndex}" rows="14" placeholder="Use this area for handwritten notes or extra details…"></textarea>
-    `;
-    const addBtn = container.querySelector('.btn-add-notes-page');
-    container.insertBefore(pageDiv, addBtn);
-
-    pageDiv.querySelector('textarea').addEventListener('input', scheduleSave);
-    injectHandwrittenBlock(pageDiv.querySelector('textarea'));
-    scheduleSave();
-  }
-
-  document.querySelectorAll('.btn-add-notes-page').forEach((btn) => {
-    btn.addEventListener('click', () => addNotesPage(btn.getAttribute('data-section')));
-  });
-
-  function ensureNotesPagesForSection(sectionId, count, data) {
-    const container = form.querySelector('.notes-pages-container[data-section="' + sectionId + '"]');
-    if (!container) return;
-    const countInput = container.querySelector('input[name="notes_page_count_' + sectionId + '"]');
-    const existingPages = container.querySelectorAll('.notes-page');
-    let currentCount = existingPages.length;
-    while (currentCount < count) {
-      const nextIndex = currentCount;
-      countInput.value = nextIndex + 1;
-      const pageDiv = document.createElement('div');
-      pageDiv.className = 'notes-page';
-      pageDiv.setAttribute('data-page-index', nextIndex);
-      pageDiv.innerHTML = `
-        <label>Notes page ${nextIndex + 1}</label>
-        <textarea name="notes_page_${sectionId}_${nextIndex}" rows="14" placeholder="Use this area for handwritten notes or extra details…"></textarea>
-      `;
-      const addBtn = container.querySelector('.btn-add-notes-page');
-      container.insertBefore(pageDiv, addBtn);
-      const val = (data.fields && data.fields['notes_page_' + sectionId + '_' + nextIndex]) || '';
-      pageDiv.querySelector('textarea').value = val;
-      pageDiv.querySelector('textarea').addEventListener('input', scheduleSave);
-      injectHandwrittenBlock(pageDiv.querySelector('textarea'));
-      currentCount++;
-    }
-  }
-
   const originalSetFormData = setFormData;
   setFormData = function (data) {
     originalSetFormData(data);
     if (!data || !data.fields) return;
-    TAB_IDS.forEach((sectionId) => {
-      const count = parseInt(data.fields['notes_page_count_' + sectionId], 10) || 1;
-      ensureNotesPagesForSection(sectionId, count, data);
-    });
     Object.keys(data.fields || {}).forEach(function (name) {
       if (name.indexOf('_handwritten') === -1) return;
       var val = (data.fields[name] || '').toString().trim();

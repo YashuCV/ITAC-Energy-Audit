@@ -530,11 +530,14 @@
       if (e.pointerType !== 'pen') return;
       e.preventDefault();
       drawing = true;
+      // Any new stroke should postpone autosave so it doesn't run while writing.
+      scheduleSave();
       var p = getPos(e);
       lastX = p.x;
       lastY = p.y;
     }
     function move(e) {
+      if (e.pointerType !== 'pen') return;
       e.preventDefault();
       if (!drawing) return;
       var p = getPos(e);
@@ -546,9 +549,10 @@
       lastY = p.y;
     }
     function end(e) {
+      if (e.pointerType !== 'pen') return;
       e.preventDefault();
       if (drawing) {
-        updateCanvasHiddenInputs();
+        // Just schedule a debounced save; heavy image work happens later when idle.
         scheduleSave();
       }
       drawing = false;
@@ -1244,26 +1248,9 @@
   async function downloadPdf() {
     try {
       saveStatus.textContent = 'Preparing PDF…';
+      // Capture latest handwritten notes into hidden fields (can be a bit heavy, but this
+      // only runs when explicitly downloading the PDF, not on every pen lift).
       updateCanvasHiddenInputs();
-      form.querySelectorAll('.handwritten-canvas').forEach(function (canvas) {
-        var field = canvas.getAttribute('data-field');
-        if (!field) return;
-        var hidden = form.querySelector('input[name="' + field + '_handwritten"]');
-        if (hidden) {
-          try {
-            if (canvasHasContent(canvas)) {
-              var dataUrl = canvasToImageWithBackground(canvas);
-              if (dataUrl && dataUrl !== 'data:,') {
-                hidden.value = dataUrl;
-              }
-            } else {
-              hidden.value = '';
-            }
-          } catch (e) {
-            console.warn('Failed to save canvas for PDF', field, e);
-          }
-        }
-      });
       const doc = await buildPdfFull();
       const facility = (getFormData().fields.facility_name || 'Form').replace(/\s+/g, '-');
       const name = 'ITAC-Energy-Audit-' + facility + '-' + new Date().toISOString().slice(0, 10) + '.pdf';

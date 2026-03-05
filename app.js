@@ -48,6 +48,32 @@
     panel.querySelectorAll('.handwritten-canvas').forEach(function (canvas) {
       var box = canvas.closest('.notes-combo-box');
       if (!box) return;
+      var scrollWrap = canvas.parentNode && canvas.parentNode.classList && canvas.parentNode.classList.contains('handwritten-canvas-scroll') ? canvas.parentNode : null;
+      if (box.classList.contains('continuous-scroll') && scrollWrap && scrollWrap.clientWidth > 0 && canvas.width !== scrollWrap.clientWidth) {
+        var cw = scrollWrap.clientWidth;
+        var ctx = canvas.getContext('2d');
+        if (ctx) {
+          var hadContent = canvas.width > 0 && canvas.height > 0 && canvasHasContent(canvas);
+          var imgData = null;
+          try {
+            imgData = hadContent ? ctx.getImageData(0, 0, canvas.width, canvas.height) : null;
+          } catch (e) {}
+          canvas.width = cw;
+          canvas.height = 2400;
+          canvas.style.width = cw + 'px';
+          canvas.style.height = '2400px';
+          if (imgData && imgData.data && imgData.data.length > 0) {
+            try {
+              var tempCanvas = document.createElement('canvas');
+              tempCanvas.width = imgData.width;
+              tempCanvas.height = imgData.height;
+              tempCanvas.getContext('2d').putImageData(imgData, 0, 0);
+              ctx.drawImage(tempCanvas, 0, 0, canvas.width, canvas.height);
+            } catch (e) {}
+          }
+        }
+        return;
+      }
       var textarea = box.querySelector('.notes-combo-textarea');
       if (!textarea) return;
       var r = textarea.getBoundingClientRect();
@@ -419,7 +445,7 @@
     if (textareaEl.closest && textareaEl.closest('.notes-combo-box')) return;
     var field = textareaEl.name;
     var wrapper = document.createElement('div');
-    wrapper.className = 'notes-combo-box draw-mode';
+    wrapper.className = 'notes-combo-box draw-mode continuous-scroll';
     textareaEl.classList.add('notes-combo-textarea');
     textareaEl.placeholder = 'Use Apple Pencil only to draw (finger and hand rest are ignored).';
     textareaEl.readOnly = true;
@@ -427,12 +453,15 @@
     var parent = textareaEl.parentNode;
     parent.insertBefore(wrapper, textareaEl);
     wrapper.appendChild(textareaEl);
+    var scrollWrap = document.createElement('div');
+    scrollWrap.className = 'handwritten-canvas-scroll';
     var canvas = document.createElement('canvas');
     canvas.className = 'handwritten-canvas';
     canvas.setAttribute('data-field', field);
     canvas.setAttribute('width', '600');
     canvas.setAttribute('height', '220');
-    wrapper.appendChild(canvas);
+    scrollWrap.appendChild(canvas);
+    wrapper.appendChild(scrollWrap);
     var hidden = document.createElement('input');
     hidden.type = 'hidden';
     hidden.name = field + '_handwritten';
@@ -455,9 +484,17 @@
   function initHandwrittenCanvas(canvas) {
     var ctx = canvas.getContext('2d');
     if (!ctx) return;
+    var scrollWrap = canvas.parentNode && canvas.parentNode.classList && canvas.parentNode.classList.contains('handwritten-canvas-scroll') ? canvas.parentNode : null;
     var box = canvas.closest('.notes-combo-box');
     var textarea = box ? box.querySelector('.notes-combo-textarea') : null;
-    if (box && textarea) {
+    if (scrollWrap && scrollWrap.clientWidth > 0) {
+      var cw = scrollWrap.clientWidth;
+      var ch = 2400;
+      canvas.width = cw;
+      canvas.height = ch;
+      canvas.style.width = cw + 'px';
+      canvas.style.height = ch + 'px';
+    } else if (box && textarea) {
       var r = textarea.getBoundingClientRect();
       if (r.width > 0 && r.height > 0) {
         canvas.width = Math.floor(r.width);
@@ -754,7 +791,51 @@
       });
     }
 
-    return { doc, margin, y: () => y, setY: (v) => { y = v; }, addLine, addSectionTitle, addSubTitle, fieldVal, drawTable, newPage, lineH, addImageFromUrl };
+    function addTallImageFromUrl(dataUrl, maxW) {
+      return new Promise(function (resolve) {
+        var img = new Image();
+        img.onerror = function () { resolve(0); };
+        img.onload = function () {
+          var m = margin;
+          var pageW = doc.internal.pageSize.getWidth();
+          var maxWidth = maxW != null ? maxW : (pageW - 2 * m);
+          var pageH = 276 - m;
+          var iw = img.naturalWidth;
+          var ih = img.naturalHeight;
+          var w = Math.min(maxWidth, iw);
+          var fullH = ih * (w / iw);
+          if (fullH <= pageH + 5) {
+            addImageFromUrl(dataUrl, maxW).then(resolve);
+            return;
+          }
+          var chunkHmm = pageH - 2;
+          var chunkPx = Math.ceil(ih * (chunkHmm / fullH));
+          var sy = 0;
+          function addNext() {
+            if (sy >= ih) { resolve(fullH); return; }
+            var sh = Math.min(chunkPx, ih - sy);
+            var temp = document.createElement('canvas');
+            temp.width = iw;
+            temp.height = sh;
+            var tctx = temp.getContext('2d');
+            tctx.fillStyle = '#fff';
+            tctx.fillRect(0, 0, iw, sh);
+            tctx.drawImage(img, 0, sy, iw, sh, 0, 0, iw, sh);
+            var chunkData = temp.toDataURL('image/png', 1.0);
+            var chunkH = sh * (w / iw);
+            if (y + chunkH > 276) newPage();
+            doc.addImage(chunkData, 'PNG', m, y, w, chunkH);
+            y += chunkH + 4;
+            sy += sh;
+            setTimeout(addNext, 0);
+          }
+          addNext();
+        };
+        img.src = dataUrl;
+      });
+    }
+
+    return { doc, margin, y: () => y, setY: (v) => { y = v; }, addLine, addSectionTitle, addSubTitle, fieldVal, drawTable, newPage, lineH, addImageFromUrl, addTallImageFromUrl };
   }
 
   const PDF_LABELS = {
@@ -893,12 +974,12 @@
   }
 
   async function addSectionNotesToPdf(ctx, sectionId, sectionLabel, data) {
-    const { addSubTitle, addImageFromUrl } = ctx;
+    const { addSubTitle, addTallImageFromUrl } = ctx;
     const fields = data.fields || {};
     const hand = (fields['notes_continuous_' + sectionId + '_handwritten'] || '').toString();
     if (hand.length > 100) {
       addSubTitle('Continuous notes (handwritten)');
-      await addImageFromUrl(hand);
+      await addTallImageFromUrl(hand);
     }
   }
 

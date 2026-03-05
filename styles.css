@@ -299,6 +299,29 @@ body {
   box-sizing: border-box;
 }
 
+/* Scrollable drawing area for continuous notes */
+.handwritten-canvas-scroll {
+  max-height: 55vh;
+  min-height: 280px;
+  overflow-y: auto;
+  overflow-x: hidden;
+  -webkit-overflow-scrolling: touch;
+  background: #fafbfc;
+  border-radius: var(--radius);
+}
+
+.handwritten-canvas-scroll .handwritten-canvas {
+  position: static;
+  display: block;
+  width: 100%;
+  height: auto;
+  background: #fff;
+}
+
+.notes-combo-box.continuous-scroll .notes-combo-textarea {
+  display: none;
+}
+
 .notes-pages-container {
   margin-top: 16px;
 }
